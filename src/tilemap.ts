@@ -39,6 +39,15 @@ export function getTilemap(cel: TileMapCel): TileRef[] {
 }
 
 /**
+ * Obtains the number of non-empty tiles in the tilemap
+ * @param cel  The cel with the tilemap
+ * @returns 
+ */
+export function nonEmptyTiles(cel: TileMapCel): number {
+    return getTilemap(cel).filter(tile => tile.tileId != 0).length;
+}
+
+/**
  * Obtains the offset of the sprite in the tilemap to be used as anchor, using the middle of x axis
  * and the bottom of the y axis as reference.
  * @param cel 
@@ -53,20 +62,22 @@ export function tilemapOffset(cel: TileMapCel): [number, number] {
  * Obtains a buffer with the sprite representation of the spectrum next of the tilemap in the cel
  * @param cel 
  */
-export function tilemapToNextSprite(cel: TileMapCel): Buffer {
+export function tilemapToNextSprite(cel: TileMapCel, patternIndexOffset: number): Buffer {
+
     const [anchorX, anchorY] = tileMapAnchor(cel);
+    const anchorIndex = anchorY * cel.w + anchorX;
 
     const tilemap = getTilemap(cel);
-    const anchorIndex = anchorY * cel.w + anchorX;
     const anchor = tilemap[anchorIndex];
-    let buffer = spriteNextAttrs(anchor, true, 0, 0);
+
+    let buffer = spriteNextAttrs(anchor, true, 0, 0, patternIndexOffset);
 
     for (let y = 0; y < cel.h; y++) {
         for (let x = 0; x < cel.w; x++) {
             const index = y * cel.w + x;
             const tile = tilemap[index];
-            if (tile.tileId != 0 && x != anchorX && y != anchorY) {
-                const relativeSprite = spriteNextAttrs(tile, false, (x - anchorX) * 16, (y - anchorY) * 16);
+            if (tile.tileId != 0 && (x != anchorX || y != anchorY)) {
+                const relativeSprite = spriteNextAttrs(tile, false, (x - anchorX) * 16, (y - anchorY) * 16, patternIndexOffset);
                 buffer = Buffer.concat([buffer, relativeSprite]);
             }
         }
@@ -99,7 +110,9 @@ function tileMapAnchor(cel: TileMapCel): [number, number] {
     return [anchor % cel.w, Math.floor(anchor / cel.w)];
 }
 
-function spriteNextAttrs(tile: TileRef, anchor: boolean, x: number, y: number): Buffer {
+function spriteNextAttrs(tile: TileRef, anchor: boolean, x: number, y: number, patternIndexOffset: number): Buffer {
+    const patternId = tile.tileId + patternIndexOffset - 1;
+    console.log(`${x},${y}:  ${patternId} - xflip: ${tile.xFlip} - yFlip: ${tile.yFlip} - rot: ${tile.rotation} - ancho: ${anchor}`);
     const buffer = Buffer.alloc(5);
     if (anchor) {
         buffer.writeUInt8(x, 0);
@@ -119,11 +132,11 @@ function spriteNextAttrs(tile: TileRef, anchor: boolean, x: number, y: number): 
     buffer.writeUInt8(attr2, 2);
 
     // Attr 3
-    const attr3 = ((tile.tileId - 1) & 0x3f) | 0xc0; // Sprite is visible and attribute 4 is used
+    const attr3 = (patternId & 0x3f) | 0xc0; // Sprite is visible and attribute 4 is used
     buffer.writeUInt8(attr3, 3);
 
     // Attr 4
-    const attr4bit0 = anchor ? (y & 0x100) >> 8 : 1; // Y MSB or relative pattern
+    const attr4bit0 = anchor ? (y & 0x100) >> 8 : 0; // Y MSB or absolute pattern
     // Bits 1 to 4 are set to 0 (no scale)
     const attr4bit5 = anchor ? 0x20 : 0x00; // Big sprite
     const attr4bit6 = anchor ? 0x00 : 0x40; // No collision detection
@@ -141,7 +154,13 @@ export function tileSetToNextPatterns(tileset: Aseprite.Tileset, transparentInde
 
     for (let point = 0; point < buffer.length; point += 1) {
         const inputIndex = (tileSize + point) * bytesPerPoint; // The first tile is not used (it is empty)
-        const [a, r, g, b] = Array.from(tilesetData.subarray(inputIndex, inputIndex + 4));
+        // rgb 157 105 64
+        // rbg
+        // bgr
+        // brg
+        // gbr
+        // grb
+        const [r, g, b, a] = Array.from(tilesetData.subarray(inputIndex, inputIndex + 4));
         const color = a === 0 ? transparentIndex : (r & 0b11100000) | ((g & 0b11100000) >> 3) | ((b & 0b11000000) >> 6);
         buffer.writeUInt8(color, point);
     }
