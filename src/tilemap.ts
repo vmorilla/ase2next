@@ -1,5 +1,6 @@
 import Aseprite from "ase-parser";
 
+
 export type TileRef = {
     tileId: number;
     xFlip: boolean;
@@ -154,17 +155,16 @@ export function tileSetToNextPatterns(tileset: Aseprite.Tileset, transparentInde
 
     for (let point = 0; point < buffer.length; point += 1) {
         const inputIndex = (tileSize + point) * bytesPerPoint; // The first tile is not used (it is empty)
-        // rgb 157 105 64
-        // rbg
-        // bgr
-        // brg
-        // gbr
-        // grb
         const [r, g, b, a] = Array.from(tilesetData.subarray(inputIndex, inputIndex + 4));
-        const color = a === 0 ? transparentIndex : (r & 0b11100000) | ((g & 0b11100000) >> 3) | ((b & 0b11000000) >> 6);
+        const color = nextColor(r, g, b, a, transparentIndex);
         buffer.writeUInt8(color, point);
     }
 
     return buffer;
 }
+
+function nextColor(r: number, g: number, b: number, a: number, transparentIndex: number): number {
+    return a === 0 ? transparentIndex : (r & 0b11100000) | ((g & 0b11100000) >> 3) | ((b & 0b11000000) >> 6);
+}
+
 

@@ -3,6 +3,7 @@ import fs from "fs";
 import { Command } from "commander";
 import { TileMapCel, isTileMapCel, tileSetToNextPatterns, tilemapOffset, tilemapToNextSprite } from "./tilemap";
 import { OutputAsmFile } from "./asm";
+import { loadSprite } from "./sprite";
 
 // Function to process the Aseprite file
 async function processAsepriteFile(inputFile: string, outputFile: string, patternOffset: number) {
@@ -11,9 +12,10 @@ async function processAsepriteFile(inputFile: string, outputFile: string, patter
     const ase = new Aseprite(buffer, inputFile);
     ase.parse();
     const tileLayers = ase.layers.filter(layer => layer.tilesetIndex !== undefined);
+    const attributes = [];
 
-    for (let layerIndex = 0; layerIndex < ase.layers.length; layerIndex++) {
-        const layer = ase.layers[layerIndex];
+    for (let layerIndex = 0; layerIndex < tileLayers.length; layerIndex++) {
+        const layer = tileLayers[layerIndex];
         if (layer.tilesetIndex !== undefined) {
             for (let frameIndex = 0; frameIndex < ase.frames.length; frameIndex++) {
                 const frame = ase.frames[frameIndex];
@@ -53,20 +55,51 @@ async function processCel(ase: Aseprite, outputFile: string, cel: TileMapCel, ti
     console.log(`Tileset patterns have been written to ${patternsFile}`);
 }
 
+
+
+async function main(inputFiles: string[], outputDir: string) {
+    const attributes = [];
+    for (const inputFile of inputFiles) {
+        const sprite = loadSprite(inputFile);
+        console.log(`Processing ${inputFile}`);
+
+        // const tileLayers = ase.layers.filter(layer => layer.tilesetIndex !== undefined);
+        // for (let layerIndex = 0; layerIndex < tileLayers.length; layerIndex++) {
+        //     const layer = tileLayers[layerIndex];
+        //     if (layer.tilesetIndex !== undefined) {
+        //         for (let frameIndex = 0; frameIndex < ase.frames.length; frameIndex++) {
+        //             const frame = ase.frames[frameIndex];
+        //             const cel = frame.cels[layerIndex];
+        //             if (isTileMapCel(cel)) {
+        //                 const tileset = ase.tilesets[layer.tilesetIndex];
+        //                 const patternOffset = 0;
+        //                 await processCel(ase, outputDir, cel, tileset, patternOffset);
+        //             }
+        //             else {
+        //                 console.error("Cel does not have a tileset associated");
+        //             }
+        //         }
+        //     }
+        // }
+
+
+
+    }
+}
+
 // Initialize commander
 const program = new Command();
 
 program
     .name('ase2next')
     .version('1.0.0')
-    .argument('<input>', 'Input Aseprite file')
-    .requiredOption('-o, --output <file>', 'Output file')
-    .option('-p, --pattern-offset <offset>', 'Offset for the pattern index', (value) => parseInt(value, 10), 0)
+    .argument('<inputs...>', 'Input Aseprite file')
+    .option('-o, --output <dir>', 'Output directory', './')
     .parse(process.argv);
 
 const options = program.opts();
-const inputFile = program.args[0];
+const inputFiles = program.args;
 
 
 // Call the function to process the Aseprite file
-processAsepriteFile(inputFile, options.output, options.patternOffset);
+main(inputFiles, options.output);
