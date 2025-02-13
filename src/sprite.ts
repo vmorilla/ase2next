@@ -17,12 +17,14 @@ export interface Layer {
 
 export interface Tileset {
     tilesetIndex: number;
+    width: number;
+    height: number;
     tiles: Tile[];
 }
 
 export interface Tile {
     tileIndex: number;
-    content: number[];
+    content: RGBAColor[];
 }
 
 export interface Frame {
@@ -42,6 +44,8 @@ export interface TileRef {
     yFlip: boolean;
     rotation: boolean;
 }
+
+export type RGBAColor = [number, number, number, number];
 
 export function loadSprite(file: string): Sprite {
     const buffer = fs.readFileSync(file);
@@ -72,7 +76,9 @@ function loadTilesets(ase: Aseprite): Tileset[] {
     return ase.tilesets.map((tileset, tilesetIndex) => {
         return {
             tilesetIndex,
-            tiles: Array.from(loadTiles(tileset))
+            tiles: Array.from(loadTiles(tileset)),
+            width: tileset.tileWidth,
+            height: tileset.tileHeight
         };
     });
 }
@@ -85,18 +91,12 @@ function* loadTiles(tileset: Aseprite.Tileset): Generator<Tile> {
         const tile: Tile = { tileIndex: tileIndex - 1, content: [] };
         for (let point = 0; point < tileSize; point += 1) {
             const pointIndex = (tileSize * tileIndex + point) * bytesPerPoint;
-            const [r, g, b, a] = Array.from(tileset.rawTilesetData!.subarray(pointIndex, pointIndex + 4));
-            const color = nextColor(r, g, b, a, 227);
+            const color = Array.from(tileset.rawTilesetData!.subarray(pointIndex, pointIndex + 4)) as RGBAColor;
             tile.content.push(color);
         }
         yield tile;
     }
 }
-
-function nextColor(r: number, g: number, b: number, a: number, transparentIndex: number): number {
-    return a === 0 ? transparentIndex : (r & 0b11100000) | ((g & 0b11100000) >> 3) | ((b & 0b11000000) >> 6);
-}
-
 
 function loadLayers(ase: Aseprite, tilesets: Tileset[], frames: Frame[]): Layer[] {
     const layers: Layer[] = [];

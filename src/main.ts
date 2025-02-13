@@ -3,7 +3,8 @@ import fs from "fs";
 import { Command } from "commander";
 import { TileMapCel, isTileMapCel, tileSetToNextPatterns, tilemapOffset, tilemapToNextSprite } from "./tilemap";
 import { OutputAsmFile } from "./asm";
-import { loadSprite } from "./sprite";
+import { loadSprite, Sprite } from "./sprite";
+import { writeNextAttributes, writeNextPatters } from "./next";
 
 // Function to process the Aseprite file
 async function processAsepriteFile(inputFile: string, outputFile: string, patternOffset: number) {
@@ -55,10 +56,40 @@ async function processCel(ase: Aseprite, outputFile: string, cel: TileMapCel, ti
     console.log(`Tileset patterns have been written to ${patternsFile}`);
 }
 
+/**
+ * Assigns an index in the pattern memory to each pattern
+ * @param sprites 
+ * @returns 
+ */
+function patternIndexes(sprites: Sprite[]) {
+    const indexes = new Map<string, number>();
+    let index = 0;
+    for (const layer of sprites.flatMap(sprite => sprite.layers)) {
+        indexes.set(layer.name, index);
+        index += layer.tileset.tiles.length;
+    }
+
+    if (index > 64) {
+        throw new Error(`Too many patterns: ${index}`);
+    }
+
+    return indexes;
+}
+
 
 
 async function main(inputFiles: string[], outputDir: string) {
+
+    const patternsFile = `${outputDir}/patterns.bin`;
     const sprites = inputFiles.map(file => loadSprite(file));
+    const layers = sprites.flatMap(sprite => sprite.layers);
+    const tilesets = layers.map(layer => layer.tileset);
+    writeNextPatters(tilesets, patternsFile);
+
+    const indexes = patternIndexes(sprites);
+    const attrsFile = `${outputDir}/attributes.asm`;
+    writeNextAttributes(sprites, indexes, attrsFile);
+
     console.log("Done");
 
 
