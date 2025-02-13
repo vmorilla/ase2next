@@ -35,6 +35,8 @@ export interface Cel {
     frame: Frame;
     width: number;
     height: number;
+    xPos: number;
+    yPos: number;
     tilemap: Array<TileRef | null>;
 }
 
@@ -144,6 +146,8 @@ function loadCel(cel: Aseprite.Cel, frame: Frame, tileset: Tileset): Cel {
         frame,
         width: cel.w,
         height: cel.h,
+        xPos: cel.xpos,
+        yPos: cel.ypos,
         tilemap
     };
 }

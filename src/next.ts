@@ -1,5 +1,5 @@
 import { OutputAsmFile } from "./asm";
-import { Cel, RGBAColor, Sprite, TileRef, Tileset } from "./sprite";
+import { Cel, Layer, RGBAColor, Sprite, TileRef, Tileset } from "./sprite";
 import fs from "fs";
 
 export type ColorFn = (color: RGBAColor) => number;
@@ -29,7 +29,7 @@ export function nextColor256(transparentIndex = 227) {
 }
 
 
-export async function writeNextPatters(tilesets: Tileset[], filename: string, colorFn = nextColor256()) {
+export async function writeNextPatterns(tilesets: Tileset[], filename: string, colorFn = nextColor256()) {
 
     // Open the file for writing
     const stream = fs.createWriteStream(filename);
@@ -43,19 +43,21 @@ export async function writeNextPatters(tilesets: Tileset[], filename: string, co
 }
 
 
-export async function writeNextAttributes(sprites: Sprite[], indexes: Map<string, number>, outputFile: string) {
+export async function writeNextAttributes(sprites: Sprite[], outputFile: string) {
     const asm = new OutputAsmFile(outputFile);
+    const indexes = patternIndexes(sprites);
 
-    const layers = sprites.flatMap(sprite => sprite.layers);
-    asm.addHeader("BANK 05", layers.map(layer => spriteLabel(layer.name)));
 
-    for (const layer of layers) {
-        asm.addLabel(spriteLabel(layer.name));
-        const indexOffset = indexes.get(layer.name);
+    const families = spriteFamilies(sprites);
+    asm.addHeader("BANK 05", Array.from(families.keys()).map(spriteLabel));
+
+    for (const [family, layers] of families) {
+        asm.addLabel(spriteLabel(family));
+        const indexOffset = indexes.get(family);
         if (indexOffset === undefined)
-            throw new Error(`Layer ${layer.name} not found in indexes`);
+            throw new Error(`Family ${family} not found in indexes`);
 
-        for (const cel of layer.cels) {
+        for (const cel of layers.flatMap(l => l.cels)) {
             asm.addComment(`Frame ${cel.frame.frameIndex}`);
             asm.writeBuffer(celAttrs(cel, indexOffset), 5);
         }
@@ -144,4 +146,120 @@ function tilemapAnchor(cel: Cel): [number, number] {
     if (anchor < 0)
         throw new Error("All tiles are empty: no anchor can be used");
     return [anchor % cel.width, Math.floor(anchor / cel.width)];
+}
+
+export async function writeNextStructs(layers: Layer[], outputFile: string) {
+    const asm = new OutputAsmFile(outputFile);
+    for (const layer of layers) {
+        asm.addLabel(spriteLabel(layer.name));
+        for (const cel of layer.cels) {
+            asm.addComment(`Frame ${cel.frame.frameIndex}`);
+            asm.writeBuffer(celAttrs(cel, 0), 5);
+        }
+    }
+
+    await asm.close();
+}
+
+/**
+ * Assigns an index in the pattern memory to each sprite familty
+ * Sprite families include different skins for the same sprite
+ * The function calculates the biggest size in the memory pattern 
+ * for all the cel frames with the different skins.
+ * @param sprites 
+ * @returns a map with the family name as key and the index in the pattern memory as value
+ */
+export function patternIndexes(sprites: Sprite[]): Map<string, number> {
+    const indexes = new Map<string, number>();
+    let index = 0;
+    const families = spriteFamilies(sprites);
+    for (const [family, layers] of families) {
+        const maxTiles = Math.max(...layers.map(layer => layer.tileset.tiles.length));
+        indexes.set(family, index);
+        index += maxTiles;
+    }
+
+    if (index > 64) {
+        throw new Error(`Too many patterns: ${index}`);
+    }
+
+    return indexes;
+}
+
+/**
+ * Groups the layers of the sprites by family name
+ * @param sprites 
+ * @returns 
+ */
+export function spriteFamilies(sprites: Sprite[]): Map<string, Layer[]> {
+    return groupBy(sprites.flatMap(sprite => sprite.layers), family_name);
+}
+
+
+function family_name(layer: Layer) {
+    // Finds the ocurrence of the ":" character and returns the substring before
+    // If the "-" character is not found, the function returns the whole string
+    const index = layer.name.indexOf(":");
+    return index < 0 ? layer.name : layer.name.substring(0, index);
+}
+
+
+
+function groupBy<T>(array: T[], key: (item: T) => string): Map<string, T[]> {
+    const map = new Map<string, T[]>();
+
+    for (const item of array) {
+        const k = key(item);
+        if (!map.has(k)) {
+            map.set(k, []);
+        }
+        map.get(k)!.push(item);
+    }
+
+    return map;
+}
+
+
+export async function writeMetadata(sprites: Sprite[], metadataFile: string, metadataOutput: string) {
+    const metadata = JSON.parse(fs.readFileSync(metadataFile, "utf-8"));
+    const stream = fs.createWriteStream(metadataOutput);
+    const families = spriteFamilies(sprites);
+
+    const slots = metadata.slots as string[];
+    const patIndexes = patternIndexes(sprites);
+    let attrIndex = 0;
+    writeMetadataHeader(stream);
+    for (const slot of slots) {
+        const patIndex = patIndexes.get(slot);
+        const family = families.get(slot)!;
+        const maxTiles = Math.max(...family.map(layer => layer.tileset.tiles.length));
+        const nFrames = family[0].cels.length;
+        const nSkins = family.length;
+        writeSpriteSlot(stream, slot, [attrIndex, maxTiles, patIndex!, nFrames, nSkins], spriteLabel(slot));
+
+        attrIndex += maxTiles;
+    }
+    closeSpriteSlots(stream);
+
+    for (const slot of slots) {
+        const label = spriteLabel(slot);
+
+    }
+
+    await stream.end();
+    console.log(`Metadata has been written to ${metadataOutput}`);
+}
+
+function writeMetadataHeader(stream: fs.WriteStream) {
+    stream.write(`#include "sprite_slots.h"\n\n`);
+    stream.write(`SpriteSlot spriteSlots[] = {\n`);
+}
+
+function writeSpriteSlot(stream: fs.WriteStream, slot: string, values: number[], spriteDefRef: string) {
+    stream.write(`\t//${slot}\n`);
+    stream.write(`\t{${values.join(", ")}, &${spriteDefRef}, &${spriteDefRef}}\n`);
+}
+
+function closeSpriteSlots(stream: fs.WriteStream) {
+    stream.write(`};\n\n`);
 }
