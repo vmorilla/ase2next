@@ -16,7 +16,9 @@
             "args": [
                 "-o",
                 "test.asm",
-                "../next-tennis/assets/sprites/ball.aseprite"
+                // "../next-tennis/assets/sprites/ball.aseprite",
+                // "../next-tennis/assets/sprites/net.aseprite",
+                "../next-tennis/assets/sprites/player.aseprite",
             ],
             "outFiles": [
                 "${workspaceFolder}/**/*.js"

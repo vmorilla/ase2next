@@ -53,6 +53,7 @@ export function loadSprite(file: string): Sprite {
     const layers = loadLayers(ase, tilesets, frames);
     // Regular expression to extract the file name without extension or path
     const name = file.match(/([^\/\\]+)(?=\.\w+$)/)![0];
+    console.log(`Loaded sprite ${name}`);
     return {
         name,
         layers,

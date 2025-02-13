@@ -58,34 +58,34 @@ async function processCel(ase: Aseprite, outputFile: string, cel: TileMapCel, ti
 
 
 async function main(inputFiles: string[], outputDir: string) {
-    const attributes = [];
-    for (const inputFile of inputFiles) {
-        const sprite = loadSprite(inputFile);
-        console.log(`Processing ${inputFile}`);
-
-        // const tileLayers = ase.layers.filter(layer => layer.tilesetIndex !== undefined);
-        // for (let layerIndex = 0; layerIndex < tileLayers.length; layerIndex++) {
-        //     const layer = tileLayers[layerIndex];
-        //     if (layer.tilesetIndex !== undefined) {
-        //         for (let frameIndex = 0; frameIndex < ase.frames.length; frameIndex++) {
-        //             const frame = ase.frames[frameIndex];
-        //             const cel = frame.cels[layerIndex];
-        //             if (isTileMapCel(cel)) {
-        //                 const tileset = ase.tilesets[layer.tilesetIndex];
-        //                 const patternOffset = 0;
-        //                 await processCel(ase, outputDir, cel, tileset, patternOffset);
-        //             }
-        //             else {
-        //                 console.error("Cel does not have a tileset associated");
-        //             }
-        //         }
-        //     }
-        // }
+    const sprites = inputFiles.map(file => loadSprite(file));
+    console.log("Done");
 
 
 
-    }
+    // const tileLayers = ase.layers.filter(layer => layer.tilesetIndex !== undefined);
+    // for (let layerIndex = 0; layerIndex < tileLayers.length; layerIndex++) {
+    //     const layer = tileLayers[layerIndex];
+    //     if (layer.tilesetIndex !== undefined) {
+    //         for (let frameIndex = 0; frameIndex < ase.frames.length; frameIndex++) {
+    //             const frame = ase.frames[frameIndex];
+    //             const cel = frame.cels[layerIndex];
+    //             if (isTileMapCel(cel)) {
+    //                 const tileset = ase.tilesets[layer.tilesetIndex];
+    //                 const patternOffset = 0;
+    //                 await processCel(ase, outputDir, cel, tileset, patternOffset);
+    //             }
+    //             else {
+    //                 console.error("Cel does not have a tileset associated");
+    //             }
+    //         }
+    //     }
+    // }
+
+
+
 }
+
 
 // Initialize commander
 const program = new Command();
