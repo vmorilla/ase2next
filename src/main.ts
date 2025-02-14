@@ -69,7 +69,7 @@ async function main(inputFiles: string[], metadataFile: string, outputDir: strin
     await writeNextAttributes(sprites, attrsFile);
 
     // Opens the metadata file and parses it as a JSON object
-    const metadataOutput = `${outputDir}/metadata.c`;
+    const metadataOutput = `${outputDir}/../src/metadata.c`;
     await writeMetadata(sprites, metadataFile, metadataOutput);
 
 

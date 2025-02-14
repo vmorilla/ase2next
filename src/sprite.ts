@@ -151,3 +151,10 @@ function loadCel(cel: Aseprite.Cel, frame: Frame, tileset: Tileset): Cel {
         tilemap
     };
 }
+
+// export function celOffset(cel: Cel): [number, number] {
+
+//     return [x * 16 - cel.w * 8, (y - cel.h) * 16];
+
+//     return [cel.xPos - cel.width / 2, cel.yPos - cel.height];
+// }
