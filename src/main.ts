@@ -57,7 +57,7 @@ async function processCel(ase: Aseprite, outputFile: string, cel: TileMapCel, ti
 }
 
 
-async function main(inputFiles: string[], metadataFile: string, outputDir: string) {
+async function main(inputFiles: string[], metadataFile: string, outputDir: string, attributesFile: string) {
 
     const patternsFile = `${outputDir}/patterns.bin`;
     const sprites = inputFiles.map(file => loadSprite(file));
@@ -69,8 +69,7 @@ async function main(inputFiles: string[], metadataFile: string, outputDir: strin
     await writeNextAttributes(sprites, attrsFile);
 
     // Opens the metadata file and parses it as a JSON object
-    const metadataOutput = `${outputDir}/../src/metadata.c`;
-    await writeMetadata(sprites, metadataFile, metadataOutput);
+    await writeMetadata(sprites, metadataFile, attributesFile);
 
 
     console.log("Done");
@@ -108,8 +107,9 @@ program
     .name('ase2next')
     .version('1.0.0')
     .argument('<inputs...>', 'Input Aseprite file')
-    .requiredOption('-m, --meta <file>', 'Sprite metadata file')
-    .option('-o, --output <dir>', 'Output directory', './')
+    .requiredOption('-m, --metadata-file <file>', 'Sprite metadata file')
+    .option('-o, --output-dir <dir>', 'Output directory', './')
+    .requiredOption('-a, --attributes-file <file>', '.c file for representation of attribute slots')
     .parse(process.argv);
 
 const options = program.opts();
@@ -117,4 +117,4 @@ const inputFiles = program.args;
 
 
 // Call the function to process the Aseprite file
-main(inputFiles, options.meta, options.output);
+main(inputFiles, options.metadataFile, options.outputDir, options.attributesFile);
