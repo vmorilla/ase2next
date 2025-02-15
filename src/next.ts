@@ -43,34 +43,10 @@ export async function writeNextPatterns(tilesets: Tileset[], filename: string, c
 }
 
 
-export async function writeNextAttributes(sprites: Sprite[], outputFile: string) {
-    const asm = new OutputAsmFile(outputFile);
-    const indexes = patternIndexes(sprites);
-
-
-    const families = spriteFamilies(sprites);
-    asm.addHeader("BANK 05", Array.from(families.keys()).map(spriteLabel));
-
-    for (const [family, layers] of families) {
-        asm.addLabel(spriteLabel(family));
-        const indexOffset = indexes.get(family);
-        if (indexOffset === undefined)
-            throw new Error(`Family ${family} not found in indexes`);
-
-        for (const cel of layers.flatMap(l => l.cels)) {
-            asm.addComment(`Frame ${cel.frame.frameIndex}`);
-            asm.writeBuffer(celAttrs(cel, indexOffset), 5);
-        }
-    }
-
-    await asm.close();
-
-}
-
 function celAttrs(cel: Cel, patternIndexOffset: number): Buffer {
     const [anchorX, anchorY] = tilemapAnchor(cel);
     const anchorIndex = anchorX + anchorY * cel.width;
-    const buffer = spriteNextAttrs(cel.tilemap[anchorIndex]!, true, anchorX, anchorY, patternIndexOffset);
+    const buffer = spriteNextAttrs(cel.tilemap[anchorIndex]!, true, 0, 0, patternIndexOffset);
 
     return cel.tilemap.reduce((acc_buffer, tileRef, index) => {
         if (tileRef === null || index === anchorIndex)
@@ -78,7 +54,7 @@ function celAttrs(cel: Cel, patternIndexOffset: number): Buffer {
 
         const x = index % cel.width - anchorX;
         const y = Math.floor(index / cel.width) - anchorY;
-        const nextBuffer = spriteNextAttrs(tileRef, false, x, y, tileRef.tile.tileIndex + patternIndexOffset);
+        const nextBuffer = spriteNextAttrs(tileRef, false, x, y, patternIndexOffset);
         return Buffer.concat([acc_buffer, nextBuffer]);
     }, buffer);
 }
@@ -91,12 +67,12 @@ function spriteNextAttrs(tileRef: TileRef, anchor: boolean, x: number, y: number
     const patternId = tileRef.tile.tileIndex + patternIndexOffset;
     console.log(`${x},${y}:  ${patternId} - xflip: ${tileRef.xFlip} - yFlip: ${tileRef.yFlip} - rot: ${tileRef.rotation} - ancho: ${anchor}`);
     const buffer = Buffer.alloc(5);
+
     if (anchor) {
         buffer.writeUInt8(x * 16, 0);
         buffer.writeUInt8(y * 16, 1);
     }
     else {
-        // Relative sprites coordinates can be negative
         buffer.writeInt8(x * 16, 0);
         buffer.writeInt8(y * 16, 1);
     }
@@ -146,19 +122,6 @@ function tilemapAnchor(cel: Cel): [number, number] {
     if (anchor < 0)
         throw new Error("All tiles are empty: no anchor can be used");
     return [anchor % cel.width, Math.floor(anchor / cel.width)];
-}
-
-export async function writeNextStructs(layers: Layer[], outputFile: string) {
-    const asm = new OutputAsmFile(outputFile);
-    for (const layer of layers) {
-        asm.addLabel(spriteLabel(layer.name));
-        for (const cel of layer.cels) {
-            asm.addComment(`Frame ${cel.frame.frameIndex}`);
-            asm.writeBuffer(celAttrs(cel, 0), 5);
-        }
-    }
-
-    await asm.close();
 }
 
 /**
@@ -235,7 +198,7 @@ export async function writeMetadata(sprites: Sprite[], metadataFile: string, met
     for (const slot of slots) {
         const patIndex = patIndexes.get(slot);
         const family = families.get(slot)!;
-        const maxTiles = Math.max(...family.map(layer => layer.tileset.tiles.length));
+        const maxTiles = nMaxAttributes(family);
         const nFrames = family[0].cels.length;
         const nSkins = family.length;
         writeSpriteSlot(stream, slot, [attrIndex, maxTiles, patIndex!, nFrames, nSkins], spriteDefLabel(slot));
@@ -263,7 +226,7 @@ export async function writeMetadata(sprites: Sprite[], metadataFile: string, met
         const patIndex = patIndexes.get(family) ?? 0;
         for (const layer of layers) {
             for (const cel of layer.cels) {
-                const attrs = celAttrs(cel, patIndex!);
+                const attrs = celAttrs(cel, patIndex);
                 const label = frameLabel(layer, cel)
                 writeSpriteAttrs(stream, label, attrs);
             }
@@ -271,6 +234,11 @@ export async function writeMetadata(sprites: Sprite[], metadataFile: string, met
     }
 
     return closeStream(stream);
+}
+
+function nMaxAttributes(layer: Layer[]) {
+    const cels = layer.flatMap(l => l.cels);
+    return Math.max(...cels.map(c => c.tilemap.filter(t => t != null).length));
 }
 
 function writeMetadataHeader(stream: fs.WriteStream) {

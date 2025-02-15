@@ -3,8 +3,8 @@ import fs from "fs";
 import { Command } from "commander";
 import { TileMapCel, isTileMapCel, tileSetToNextPatterns, tilemapOffset, tilemapToNextSprite } from "./tilemap";
 import { OutputAsmFile } from "./asm";
-import { Layer, loadSprite, Sprite } from "./sprite";
-import { patternIndexes, writeMetadata, writeNextAttributes, writeNextPatterns } from "./next";
+import { loadSprite } from "./sprite";
+import { writeMetadata, writeNextPatterns } from "./next";
 
 // Function to process the Aseprite file
 async function processAsepriteFile(inputFile: string, outputFile: string, patternOffset: number) {
@@ -65,8 +65,8 @@ async function main(inputFiles: string[], metadataFile: string, outputDir: strin
     const tilesets = layers.map(layer => layer.tileset);
     await writeNextPatterns(tilesets, patternsFile);
 
-    const attrsFile = `${outputDir}/attributes.asm`;
-    await writeNextAttributes(sprites, attrsFile);
+    // const attrsFile = `${outputDir}/attributes.asm`;
+    // await writeNextAttributes(sprites, attrsFile);
 
     // Opens the metadata file and parses it as a JSON object
     await writeMetadata(sprites, metadataFile, attributesFile);
