@@ -250,7 +250,7 @@ function writeMetadataHeader(stream: fs.WriteStream) {
 
 function writeSpriteSlot(stream: fs.WriteStream, slot: string, values: number[], spriteDefRef: string) {
     stream.write(`\t//${slot}\n`);
-    stream.write(`\t{${values.join(", ")}, &${spriteDefRef}, &${spriteDefRef}},\n`);
+    stream.write(`\t{ 0, ${values.join(", ")}, &${spriteDefRef}},\n`);
 }
 
 function closeSpriteSlots(stream: fs.WriteStream) {
@@ -279,7 +279,8 @@ function writeStructContent(stream: fs.WriteStream, ...content: Array<string | n
 }
 
 function celOffset(cel: Cel): [number, number] {
-    return [-(cel.width * 16 + cel.xPos) / 2, -cel.height * 16];
+    const [anchorX, anchorY] = tilemapAnchor(cel);
+    return [anchorX * 16 - (cel.width * 16 + cel.xPos) / 2, -cel.height * 16];
 }
 
 // Name to be used for the array holding the attributes of a frame in a skin
