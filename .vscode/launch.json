@@ -15,10 +15,14 @@
             "program": "${workspaceFolder}/src/main.ts",
             "args": [
                 "-o",
-                "test.asm",
-                "../next-tennis/graphics/net-tile.aseprite",
-                "-p",
-                "18"
+                "../next-tennis/assets",
+                "-m",
+                "../next-tennis/assets/sprites/metadata.json",
+                "-a",
+                "../next-tennis/src/sprite_slots.gen.c",
+                "../next-tennis/assets/sprites/ball.aseprite",
+                "../next-tennis/assets/sprites/net.aseprite",
+                "../next-tennis/assets/sprites/player.aseprite",
             ],
             "outFiles": [
                 "${workspaceFolder}/**/*.js"
