@@ -59,7 +59,7 @@ async function processCel(ase: Aseprite, outputFile: string, cel: TileMapCel, ti
 
 async function main(inputFiles: string[], metadataFile: string, outputDir: string, attributesFile: string) {
 
-    const patternsFile = `${outputDir}/patterns.bin`;
+    const patternsFile = `${outputDir}/sprite-patterns.bin`;
     const sprites = inputFiles.map(file => loadSprite(file));
     const layers = sprites.flatMap(sprite => sprite.layers);
     const tilesets = layers.map(layer => layer.tileset);
