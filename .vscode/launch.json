@@ -20,6 +20,7 @@
                 "../next-tennis/assets/sprites/metadata.json",
                 "-a",
                 "../next-tennis/src/sprite_slots.gen.c",
+                //"../next-tennis/assets/sprites/tiles.aseprite",
                 "../next-tennis/assets/sprites/ball.aseprite",
                 "../next-tennis/assets/sprites/net.aseprite",
                 "../next-tennis/assets/sprites/player.aseprite",

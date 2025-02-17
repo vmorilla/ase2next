@@ -15,17 +15,30 @@ export interface Layer {
     cels: Cel[];
 }
 
-export interface Tileset {
+interface TilesetBase {
     tilesetIndex: number;
     width: number;
     height: number;
-    tiles: Tile[];
 }
 
-export interface Tile {
-    tileIndex: number;
-    content: RGBAColor[];
+export interface IndexedColorTileset extends TilesetBase {
+    indexedColor: true;
+    tiles: Tile<IndexColor>[];
 }
+
+export interface RGBAColorTileset extends TilesetBase {
+    indexedColor: false;
+    tiles: Tile<RGBAColor>[];
+}
+
+export type Tileset = IndexedColorTileset | RGBAColorTileset;
+
+export interface Tile<Color> {
+    tileIndex: number;
+    content: Color[];
+}
+
+export type AnyTile = Tile<IndexColor> | Tile<RGBAColor>;
 
 export interface Frame {
     frameIndex: number;
@@ -41,13 +54,19 @@ export interface Cel {
 }
 
 export interface TileRef {
-    tile: Tile;
+    tile: Tile<IndexColor> | Tile<RGBAColor>;
     xFlip: boolean;
     yFlip: boolean;
     rotation: boolean;
 }
 
 export type RGBAColor = [number, number, number, number];
+export type IndexColor = number;
+
+export function spriteRelevantLayer(layer: Layer): boolean {
+    return layer.tileset.width === 16 && layer.tileset.height === 16;
+}
+
 
 export function loadSprite(file: string): Sprite {
     const buffer = fs.readFileSync(file);
@@ -74,25 +93,53 @@ function loadFrames(ase: Aseprite): Frame[] {
 }
 
 function loadTilesets(ase: Aseprite): Tileset[] {
+
+
     return ase.tilesets.map((tileset, tilesetIndex) => {
-        return {
+        const commonFields = {
             tilesetIndex,
-            tiles: Array.from(loadTiles(tileset)),
             width: tileset.tileWidth,
             height: tileset.tileHeight
         };
+
+        const bytesPerColor = tileset.rawTilesetData!.byteLength / tileset.tileCount;
+
+        return bytesPerColor === 1 ? {
+            ...commonFields,
+            indexedColor: true,
+            tiles: Array.from(loadIndexedColorTiles(tileset))
+        } :
+            {
+                ...commonFields,
+                indexedColor: false,
+                tiles: Array.from(loadRGBATiles(tileset)),
+            };
     });
 }
 
-function* loadTiles(tileset: Aseprite.Tileset): Generator<Tile> {
+function* loadRGBATiles(tileset: Aseprite.Tileset): Generator<Tile<RGBAColor>> {
     const bytesPerPoint = 4; // bytes per point in aseprite tileset
     const tileSize = tileset.tileWidth * tileset.tileHeight;
 
     for (let tileIndex = 1; tileIndex < tileset.tileCount; tileIndex += 1) {
-        const tile: Tile = { tileIndex: tileIndex - 1, content: [] };
+        const tile: Tile<RGBAColor> = { tileIndex: tileIndex - 1, content: [] };
         for (let point = 0; point < tileSize; point += 1) {
             const pointIndex = (tileSize * tileIndex + point) * bytesPerPoint;
             const color = Array.from(tileset.rawTilesetData!.subarray(pointIndex, pointIndex + 4)) as RGBAColor;
+            tile.content.push(color);
+        }
+        yield tile;
+    }
+}
+
+function* loadIndexedColorTiles(tileset: Aseprite.Tileset): Generator<Tile<IndexColor>> {
+    const tileSize = tileset.tileWidth * tileset.tileHeight;
+
+    for (let tileIndex = 0; tileIndex < tileset.tileCount; tileIndex += 1) {
+        const tile: Tile<IndexColor> = { tileIndex: tileIndex, content: [] };
+        for (let point = 0; point < tileSize; point += 1) {
+            const pointIndex = (tileSize * tileIndex + point);
+            const color = tileset.rawTilesetData![pointIndex];
             tile.content.push(color);
         }
         yield tile;

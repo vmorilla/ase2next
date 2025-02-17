@@ -1,25 +1,23 @@
-import { Command } from "commander";
+import { Command, OptionValues } from "commander";
 import { loadSprite } from "./sprite";
-import { writeMetadata, writeNextPatterns } from "./next";
+import { writeMetadata, writeSpritePatterns } from "./next";
 
 
-async function main(inputFiles: string[], metadataFile: string, outputDir: string, attributesFile: string) {
+async function main(options: OptionValues, inputFiles: string[]) {
 
-    const patternsFile = `${outputDir}/sprite-patterns.bin`;
+    const patternsFile = `${options.outputDir}/sprite-patterns.bin`;
     const sprites = inputFiles.map(file => loadSprite(file));
     const layers = sprites.flatMap(sprite => sprite.layers);
     const tilesets = layers.map(layer => layer.tileset);
-    await writeNextPatterns(tilesets, patternsFile);
-
-    // const attrsFile = `${outputDir}/attributes.asm`;
-    // await writeNextAttributes(sprites, attrsFile);
+    await writeSpritePatterns(tilesets, patternsFile);
+    console.log(`Patterns written to ${patternsFile}`);
 
     // Opens the metadata file and parses it as a JSON object
-    await writeMetadata(sprites, metadataFile, attributesFile);
+    await writeMetadata(sprites, options.metadataFile, options.attributesFile);
+    console.log(`Metadata written to ${options.attributesFile}`);
 
 
     console.log("Done");
-
 }
 
 
@@ -30,14 +28,13 @@ program
     .name('ase2next')
     .version('1.0.0')
     .argument('<inputs...>', 'Input Aseprite file')
-    .requiredOption('-m, --metadata-file <file>', 'Sprite metadata file')
+    .requiredOption('-m, --metadata-file <file>', 'Sprite metadata input file')
     .option('-o, --output-dir <dir>', 'Output directory', './')
-    .requiredOption('-a, --attributes-file <file>', '.c file for representation of attribute slots')
+    .requiredOption('-a, --attributes-file <file>', 'Output .c file for representation of attribute slots')
     .parse(process.argv);
 
 const options = program.opts();
 const inputFiles = program.args;
 
-
 // Call the function to process the Aseprite file
-main(inputFiles, options.metadataFile, options.outputDir, options.attributesFile);
+main(options, inputFiles);

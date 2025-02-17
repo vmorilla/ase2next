@@ -1,16 +1,16 @@
 import { nextColor256 } from "./colors";
-import { Cel, Layer, Sprite, Tileset } from "./sprite";
+import { Cel, Layer, RGBAColorTileset, Sprite, spriteRelevantLayer, Tileset } from "./sprite";
 import fs from "fs";
-import { tilesetToNextPatterns } from "./tileset";
+import { tilesetToSpritePatterns } from "./tileset";
 import { celAttrs, celOffset } from "./cel";
 
-export async function writeNextPatterns(tilesets: Tileset[], filename: string, colorFn = nextColor256()) {
+export async function writeSpritePatterns(tilesets: Tileset[], filename: string, colorFn = nextColor256()) {
 
     // Open the file for writing
     const stream = fs.createWriteStream(filename);
 
-    for (const tileset of tilesets) {
-        const patterns = tilesetToNextPatterns(tileset, colorFn);
+    for (const tileset of tilesets.filter(t => !t.indexedColor && t.width === 16 && t.height === 16)) {
+        const patterns = tilesetToSpritePatterns(tileset as RGBAColorTileset, colorFn);
         stream.write(patterns);
     }
     await stream.end();
@@ -31,12 +31,13 @@ function spriteLabel(sprite: string) {
  * @param sprites 
  * @returns a map with the family name as key and the index in the pattern memory as value
  */
-export function patternIndexes(sprites: Sprite[]): Map<string, number> {
+export function spritePatternIndexes(sprites: Sprite[]): Map<string, number> {
     const indexes = new Map<string, number>();
     let index = 0;
     const families = spriteFamilies(sprites);
     for (const [family, layers] of families) {
-        const maxTiles = Math.max(...layers.map(layer => layer.tileset.tiles.length));
+        const relevantLayers = layers.filter(spriteRelevantLayer);
+        const maxTiles = Math.max(...relevantLayers.map(layer => layer.tileset.tiles.length));
         indexes.set(family, index);
         index += maxTiles;
     }
@@ -91,7 +92,7 @@ export async function writeMetadata(sprites: Sprite[], metadataFile: string, met
     const families = spriteFamilies(sprites);
 
     const slots = metadata.slots as string[];
-    const patIndexes = patternIndexes(sprites);
+    const patIndexes = spritePatternIndexes(sprites);
     let attrIndex = 0;
     writeMetadataHeader(stream);
     for (const slot of slots) {
@@ -135,8 +136,9 @@ export async function writeMetadata(sprites: Sprite[], metadataFile: string, met
     return closeStream(stream);
 }
 
-function nMaxAttributes(layer: Layer[]) {
-    const cels = layer.flatMap(l => l.cels);
+function nMaxAttributes(layers: Layer[]) {
+    const spriteLayers = layers.filter(spriteRelevantLayer);
+    const cels = spriteLayers.flatMap(l => l.cels);
     return Math.max(...cels.map(c => c.tilemap.filter(t => t != null).length));
 }
 
