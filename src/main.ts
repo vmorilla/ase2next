@@ -5,19 +5,26 @@ import { writeMetadata, writeSpritePatterns } from "./next";
 
 async function main(options: OptionValues, inputFiles: string[]) {
 
-    const patternsFile = `${options.outputDir}/sprite-patterns.bin`;
     const sprites = inputFiles.map(file => loadSprite(file));
-    const layers = sprites.flatMap(sprite => sprite.layers);
-    const tilesets = layers.map(layer => layer.tileset);
-    await writeSpritePatterns(tilesets, patternsFile);
-    console.log(`Patterns written to ${patternsFile}`);
+    const spritePatternsFile = options.writeSpritePatterns;
+    if (spritePatternsFile !== undefined) {
+        const layers = sprites.flatMap(sprite => sprite.layers);
+        const tilesets = layers.map(layer => layer.tileset);
+        await writeSpritePatterns(tilesets, spritePatternsFile);
+        console.log(`Patterns written to ${spritePatternsFile}`);
+    }
 
-    // Opens the metadata file and parses it as a JSON object
-    await writeMetadata(sprites, options.metadataFile, options.attributesFile);
-    console.log(`Metadata written to ${options.attributesFile}`);
+    const spriteSlotsFile = options.writeSpriteAttrSlots;
+    if (spriteSlotsFile !== undefined) {
+        const inputMetadataFile = options.metadataFile;
+        if (inputMetadataFile === undefined) {
+            throw new Error("Metadata file is required to write sprite attribute slots");
+        }
 
-
-    console.log("Done");
+        // Opens the metadata file and parses it as a JSON object
+        await writeMetadata(sprites, inputMetadataFile, spriteSlotsFile);
+        console.log(`Metadata written to ${spriteSlotsFile}`);
+    }
 }
 
 
@@ -28,9 +35,10 @@ program
     .name('ase2next')
     .version('1.0.0')
     .argument('<inputs...>', 'Input Aseprite file')
-    .requiredOption('-m, --metadata-file <file>', 'Sprite metadata input file')
-    .option('-o, --output-dir <dir>', 'Output directory', './')
-    .requiredOption('-a, --attributes-file <file>', 'Output .c file for representation of attribute slots')
+    .option('-m, --metadata-file <file>', 'Sprite metadata input file')
+    .option('-s, --write-sprite-attr-slots <file>', 'Output .c file for representation of attribute slots')
+    .option('-p, --write-sprite-patterns <file>', 'Output sprite patterns file')
+    .option('-t, --write-tile-definitions <file>', 'Write tile definitions to binary file')
     .parse(process.argv);
 
 const options = program.opts();
