@@ -102,7 +102,7 @@ function loadTilesets(ase: Aseprite): Tileset[] {
             height: tileset.tileHeight
         };
 
-        const bytesPerColor = tileset.rawTilesetData!.byteLength / tileset.tileCount;
+        const bytesPerColor = tileset.rawTilesetData!.byteLength / (tileset.tileWidth * tileset.tileHeight * tileset.tileCount);
 
         return bytesPerColor === 1 ? {
             ...commonFields,

@@ -1,15 +1,25 @@
 import { Command, OptionValues } from "commander";
 import { loadSprite } from "./sprite";
 import { writeMetadata, writeSpritePatterns } from "./next";
+import { write } from "fs";
+import { writeTileDefinitions } from "./tiledefs_writer";
 
+interface Options {
+    metadataFile?: string;
+    writeSpriteAttrSlots?: string;
+    writeSpritePatterns?: string;
+    writeTileDefinitions?: string;
+}
 
-async function main(options: OptionValues, inputFiles: string[]) {
+async function main(options: Options, inputFiles: string[]) {
 
     const sprites = inputFiles.map(file => loadSprite(file));
+    const layers = sprites.flatMap(sprite => sprite.layers);
+    const tilesets = layers.map(layer => layer.tileset);
+
     const spritePatternsFile = options.writeSpritePatterns;
     if (spritePatternsFile !== undefined) {
-        const layers = sprites.flatMap(sprite => sprite.layers);
-        const tilesets = layers.map(layer => layer.tileset);
+
         await writeSpritePatterns(tilesets, spritePatternsFile);
         console.log(`Patterns written to ${spritePatternsFile}`);
     }
@@ -24,6 +34,11 @@ async function main(options: OptionValues, inputFiles: string[]) {
         // Opens the metadata file and parses it as a JSON object
         await writeMetadata(sprites, inputMetadataFile, spriteSlotsFile);
         console.log(`Metadata written to ${spriteSlotsFile}`);
+    }
+
+    const tileDefinitionsFile = options.writeTileDefinitions;
+    if (tileDefinitionsFile !== undefined) {
+        await writeTileDefinitions(tilesets, tileDefinitionsFile);
     }
 }
 
