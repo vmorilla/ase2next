@@ -3,9 +3,14 @@ import fs from "fs";
 
 export interface Sprite {
     name: string;
+    palette?: Palette;
     layers: Layer[];
     frames: Frame[];
     tilesets: Tileset[];
+}
+
+export interface Palette {
+    colors: RGBAColor[]
 }
 
 export interface Layer {
@@ -73,6 +78,8 @@ export function loadSprite(file: string): Sprite {
     const ase = new Aseprite(buffer, file);
     ase.parse();
 
+
+    const palette = ase.palette ? loadPalette(ase.palette, ase.paletteIndex) : undefined;
     const tilesets = loadTilesets(ase);
     const frames = loadFrames(ase);
     const layers = loadLayers(ase, tilesets, frames);
@@ -82,8 +89,19 @@ export function loadSprite(file: string): Sprite {
         name,
         layers,
         tilesets,
-        frames
+        frames,
+        palette
     }
+}
+
+function loadPalette(palette: Aseprite.Palette | Aseprite.OldPalette, transparentIndex: number): Palette {
+    const colors: RGBAColor[] = palette.colors.map(color => color ? [color.red, color.green, color.blue, color.alpha] : [0, 0, 0, 255]);
+    if (!palette.hasOwnProperty("firstColor"))
+        colors[transparentIndex][3] = 0; // Sets alpha channel to 0
+    return {
+        colors
+    };
+
 }
 
 function loadFrames(ase: Aseprite): Frame[] {

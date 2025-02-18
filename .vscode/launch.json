@@ -26,6 +26,8 @@
                 //
                 "-t",
                 "../next-tennis/assets/tiledefs.bin",
+                "-c",
+                "../next-tennis/assets/palettes.bin",
                 "../next-tennis/assets/sprites/tiles.aseprite",
             ],
             "outFiles": [

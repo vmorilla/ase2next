@@ -1,14 +1,15 @@
 import { Command, OptionValues } from "commander";
 import { loadSprite } from "./sprite";
 import { writeMetadata, writeSpritePatterns } from "./next";
-import { write } from "fs";
 import { writeTileDefinitions } from "./tiledefs_writer";
+import { writePalettes } from "./palettes_writer";
 
 interface Options {
     metadataFile?: string;
     writeSpriteAttrSlots?: string;
     writeSpritePatterns?: string;
     writeTileDefinitions?: string;
+    writePalettes?: string;
 }
 
 async function main(options: Options, inputFiles: string[]) {
@@ -40,6 +41,11 @@ async function main(options: Options, inputFiles: string[]) {
     if (tileDefinitionsFile !== undefined) {
         await writeTileDefinitions(tilesets, tileDefinitionsFile);
     }
+
+    const palettesFile = options.writePalettes;
+    if (palettesFile !== undefined) {
+        await writePalettes(sprites, palettesFile);
+    }
 }
 
 
@@ -54,6 +60,7 @@ program
     .option('-s, --write-sprite-attr-slots <file>', 'Output .c file for representation of attribute slots')
     .option('-p, --write-sprite-patterns <file>', 'Output sprite patterns file')
     .option('-t, --write-tile-definitions <file>', 'Write tile definitions to binary file')
+    .option('-c, --write-palettes <file>', 'Write palettes to binary file')
     .parse(process.argv);
 
 const options = program.opts();
