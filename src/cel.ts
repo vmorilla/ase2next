@@ -31,7 +31,7 @@ export function celAttrs(cel: Cel): Buffer {
  * @param cel 
  * @returns 
  */
-function tilemapAnchor(cel: Cel): TileRef {
+export function tilemapAnchor(cel: Cel): TileRef {
 
     if (cel.width > 16 || cel.height > 16)
         throw new Error("The tilemap is too large to be converted to a unified sprite");

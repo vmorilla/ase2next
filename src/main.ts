@@ -3,7 +3,7 @@ import { loadSprite } from "./sprite";
 import { writeMetadata, writeSpritePatterns } from "./next";
 import { writeTileDefinitions } from "./tiledefs_writer";
 import { writePalettes } from "./palettes_writer";
-import { writeFrameDefinitions } from "./frame";
+import { writeFrameDefinitions } from "./framedef_file";
 
 interface Options {
     metadataFile?: string;

@@ -1,7 +1,62 @@
 import fs from "fs";
 import path from "path";
+import { Cel, Sprite } from "./sprite";
+import { celNumberOfPatterns, celSpriteAttrsAndPatterns, tilemapAnchor } from "./cel";
 
-export interface FrameDefData {
+/**
+ * Produces a set of asm files with the frame definition of all the sprites, together with binary files for its content
+ * Asm files are grouped by memory page (8k) starting in the @page parameter.
+ * The content includes both the attributes and the patterns
+ * Asm files follow the name convention: @asmDir/sprites_page_nn.asm
+ * Binary files follow the name convention: @binaryDir/sprites_skin_nn.bin where nn is the frame number
+ */
+export async function writeFrameDefinitions(sprites: Sprite[], page: number, asmDir: string, binaryDir: string) {
+    const frameDefFiles: FrameDefFile[] = [];
+    const skins = sprites.flatMap(sprite => sprite.layers);
+
+    for (const skin of skins) {
+        for (const cel of skin.cels) {
+            const binaryFile = binaryFilename(binaryDir, skin.name, cel.frame.frameIndex, skin.cels.length);
+            const data = Buffer.concat(celSpriteAttrsAndPatterns(cel));
+            fs.writeFileSync(binaryFile, data);
+
+            let defFile = frameDefFiles.find(f => f.fitsInPage(data.length));
+            if (!defFile) {
+                defFile = new FrameDefFile(page++);
+                frameDefFiles.push(defFile);
+            }
+
+            const [offsetX, offsetY] = celOffset(cel);
+            defFile.addFrame({
+                nTiles: cel.tilemap.length,
+                nPatterns: celNumberOfPatterns(cel),
+                offsetX,
+                offsetY,
+                identifier: `sprite_${skin.name}_${cel.frame.frameIndex}`,
+                binary_filename: binaryFile,
+                binary_size: data.length
+            });
+        }
+    }
+
+    for (const defFile of frameDefFiles) {
+        defFile.writeAsm(asmDir);
+    }
+}
+
+
+
+function binaryFilename(binaryDir: string, skin: string, frameIndex: number, nFrames: number) {
+    const skin_filename = skin.replace(/[^a-zA-Z0-9_]/g, '_');
+    if (nFrames > 1) {
+        const frameIndexStr = frameIndex.toString().padStart(2, '0');
+        return `${binaryDir}/sprites_${skin_filename}_${frameIndexStr}.bin`;
+    }
+    else
+        return `${binaryDir}/sprites_${skin_filename}.bin`;
+}
+
+interface FrameDefData {
     offsetX: number;
     offsetY: number;
     nTiles: number;
@@ -14,7 +69,7 @@ export interface FrameDefData {
 const FRAMEDEF_OVERHEAD = 4; // 4 additional bytes for nTiles, nPatterns, offsetX and offsetY
 const PAGE_SIZE = 8192;
 
-export class FrameDefFile {
+class FrameDefFile {
     frames: FrameDefData[] = [];
 
     constructor(public page: number) {
@@ -51,15 +106,22 @@ export class FrameDefFile {
     }
 }
 
+
+function celOffset(cel: Cel): [number, number] {
+    const anchor = tilemapAnchor(cel);
+    return [anchor.x * 16 - (cel.width * 16 + cel.xPos) / 2, -cel.height * 16];
+}
+
+
 function asmFilename(asmDir: string, page: number) {
     const pageStr = page.toString().padStart(2, '0');
     return `${asmDir}/sprites_page_${pageStr}.asm`;
 }
 
-function formatByte(value: number) {
-    return `0x${value.toString(16).padStart(2, "0")}`;
+function formatByte(value: number): string {
+    const byteValue = value & 0xFF; // Ensure the value is treated as an 8-bit value
+    return `0x${byteValue.toString(16).padStart(2, "0")}`;
 }
-
 
 function symbol_name(frame: FrameDefData) {
     return `_${filename_without_extension(frame.binary_filename)}`;
@@ -77,3 +139,5 @@ function composePath(referencePath: string, targetPath: string): string {
 
     return relativePath.startsWith('.') ? relativePath : `./${relativePath}`;
 }
+
+
