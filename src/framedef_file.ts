@@ -146,7 +146,7 @@ function writeSkinFile(filename: string, frameDefFiles: FrameDefFile[]) {
         fs.writeSync(fd, `\t.frameAddresses = {\n`);
         for (const frame of ordFrames)
             fs.writeSync(fd, `\t\t{${frame.page}, &${frame.c_symbol}},\n`);
-        fs.writeSync(fd, "\t};\n");
+        fs.writeSync(fd, "\t}\n");
         fs.writeSync(fd, "};\n\n");
     }
 
