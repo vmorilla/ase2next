@@ -18,7 +18,7 @@ export async function writeFrameDefinitions(sprites: Sprite[], page: number, asm
 
     for (const skin of skins) {
         for (const cel of skin.cels) {
-            const binaryFile = binaryFilename(binaryDir, skin.name, cel.frame.frameIndex);
+            const binaryFile = binaryFilename(binaryDir, skin.name, cel.frame.frameIndex, skin.cels.length);
             const data = Buffer.concat(celSpriteAttrsAndPatterns(cel));
             fs.writeFileSync(binaryFile, data);
 
@@ -47,9 +47,13 @@ export async function writeFrameDefinitions(sprites: Sprite[], page: number, asm
 
 
 
-function binaryFilename(binaryDir: string, skin: string, frameIndex: number) {
-    const frameIndexStr = frameIndex.toString().padStart(2, '0');
+function binaryFilename(binaryDir: string, skin: string, frameIndex: number, nFrames: number) {
     const skin_filename = skin.replace(/[^a-zA-Z0-9_]/g, '_');
-    return `${binaryDir}/sprites_${skin_filename}_${frameIndexStr}.bin`;
+    if (nFrames > 1) {
+        const frameIndexStr = frameIndex.toString().padStart(2, '0');
+        return `${binaryDir}/sprites_${skin_filename}_${frameIndexStr}.bin`;
+    }
+    else
+        return `${binaryDir}/sprites_${skin_filename}.bin`;
 }
 
