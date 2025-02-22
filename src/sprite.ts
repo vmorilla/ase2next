@@ -55,10 +55,12 @@ export interface Cel {
     height: number;
     xPos: number;
     yPos: number;
-    tilemap: Array<TileRef | null>;
+    tilemap: Array<TileRef>;
 }
 
 export interface TileRef {
+    x: number;
+    y: number;
     tile: Tile<IndexColor> | Tile<RGBAColor>;
     xFlip: boolean;
     yFlip: boolean;
@@ -186,7 +188,7 @@ function loadLayers(ase: Aseprite, tilesets: Tileset[], frames: Frame[]): Layer[
 
 function loadCel(cel: Aseprite.Cel, frame: Frame, tileset: Tileset): Cel {
 
-    const tilemap: Array<TileRef | null> = [];
+    const tilemap: Array<TileRef> = [];
     const tileMetadata = cel.tilemapMetadata!;
     const bytesPerTile = Math.ceil(tileMetadata.bitsPerTile / 8);
     const dataView = new DataView(cel.rawCelData.buffer);
@@ -194,16 +196,16 @@ function loadCel(cel: Aseprite.Cel, frame: Frame, tileset: Tileset): Cel {
     for (let i = 0; i < cel.rawCelData.byteLength; i += bytesPerTile) {
         const value = dataView.getUint32(i, true);
         const tileId = value & tileMetadata.bitmaskForTileId;
+        const x = (i / bytesPerTile) % cel.w;
+        const y = Math.floor((i / bytesPerTile) / cel.w);
 
         if (tileId !== 0) {
             const xFlip = (value & tileMetadata.bitmaskForXFlip) !== 0;
             const yFlip = (value & tileMetadata.bitmaskForYFlip) !== 0;
             const rotation = (value & tileMetadata.bitmaskFor90CWRotation) !== 0;
             const tile = tileset.tiles[tileId - 1];
-            tilemap.push({ tile, xFlip, yFlip, rotation });
+            tilemap.push({ tile, xFlip, yFlip, rotation, x, y });
         }
-        else
-            tilemap.push(null);
     }
 
     return {

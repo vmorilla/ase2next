@@ -2,10 +2,10 @@
 import { Writable } from 'stream';
 import * as fs from 'fs';
 
-export class OutputAsmFile {
+export class AsmWriter {
     private output: Writable;
-    constructor(outputFile: string) {
-        this.output = fs.createWriteStream(outputFile);
+    constructor(public fileName: string) {
+        this.output = fs.createWriteStream(fileName);
     }
 
     addHeader(section: string, publics: string[] = []) {

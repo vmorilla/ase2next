@@ -2,7 +2,7 @@ import { nextColor256 } from "./colors";
 import { Cel, Layer, RGBAColorTileset, Sprite, spriteRelevantLayer, Tileset } from "./sprite";
 import fs from "fs";
 import { tilesetToSpritePatterns } from "./tileset";
-import { celAttrs, celOffset } from "./cel";
+import { celAttrs } from "./cel";
 
 export async function writeSpritePatterns(tilesets: Tileset[], filename: string, colorFn = nextColor256()) {
 
@@ -16,12 +16,6 @@ export async function writeSpritePatterns(tilesets: Tileset[], filename: string,
     await stream.end();
     console.log(`Tileset patterns have been written to ${filename}`);
 }
-
-
-function spriteLabel(sprite: string) {
-    return `_sprite_${sprite.replace(/[\-]/g, "_")}`;
-}
-
 
 /**
  * Assigns an index in the pattern memory to each sprite familty
@@ -113,7 +107,8 @@ export async function writeMetadata(sprites: Sprite[], metadataFile: string, met
         for (const layer of layers) {
             writeSkinComment(stream, layer);
             for (const cel of layer.cels) {
-                const [offsetX, offsetY] = celOffset(cel);
+                // TODO: remove 
+                const [offsetX, offsetY] = [0, 0];//celOffset(cel);
                 const nTiles = cel.tilemap.filter(t => t !== null).length;
                 const label = frameLabel(layer, cel)
                 writeStructContent(stream, nTiles, offsetX, offsetY, label);
@@ -126,7 +121,7 @@ export async function writeMetadata(sprites: Sprite[], metadataFile: string, met
         const patIndex = patIndexes.get(family) ?? 0;
         for (const layer of layers) {
             for (const cel of layer.cels) {
-                const attrs = celAttrs(cel, patIndex);
+                const attrs = celAttrs(cel);
                 const label = frameLabel(layer, cel)
                 writeSpriteAttrs(stream, label, attrs);
             }

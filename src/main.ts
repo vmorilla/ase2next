@@ -1,8 +1,9 @@
-import { Command, OptionValues } from "commander";
+import { Command } from "commander";
 import { loadSprite } from "./sprite";
 import { writeMetadata, writeSpritePatterns } from "./next";
 import { writeTileDefinitions } from "./tiledefs_writer";
 import { writePalettes } from "./palettes_writer";
+import { writeFrameDefinitions } from "./frame";
 
 interface Options {
     metadataFile?: string;
@@ -15,6 +16,10 @@ interface Options {
 async function main(options: Options, inputFiles: string[]) {
 
     const sprites = inputFiles.map(file => loadSprite(file));
+
+    // WIP
+    writeFrameDefinitions(sprites, 7, "./tmp/", "./tmp/");
+
     const layers = sprites.flatMap(sprite => sprite.layers);
     const tilesets = layers.map(layer => layer.tileset);
 
