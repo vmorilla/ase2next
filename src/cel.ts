@@ -7,20 +7,6 @@ export function celNumberOfPatterns(cel: Cel): number {
     return patternIndexes.size;
 }
 
-// This function is now broken: remove it
-export function celAttrs(cel: Cel): Buffer {
-    const anchor = tilemapAnchor(cel);
-    const buffer = spriteNextAttrs(anchor, 0);
-
-    return cel.tilemap.reduce((acc_buffer, tileRef, index) => {
-        if (tileRef === anchor)
-            return acc_buffer;
-
-        const nextBuffer = spriteNextAttrs(tileRef, 0);
-        return Buffer.concat([acc_buffer, nextBuffer]);
-    }, buffer);
-}
-
 /**
  * Relative pixel coordinates are limited to a range of -128 to 127. If the sprite is too large, we must use an anchor that is closer to the center
  * to avoid an overflow in the relative coordinates.
@@ -48,7 +34,7 @@ export function tilemapAnchor(cel: Cel): TileRef {
     return anchor;
 }
 
-export function spriteNextAttrs(tileRef: TileRef, anchorPatternIndex: number): Buffer {
+function spriteNextAttrs(tileRef: TileRef, anchorPatternIndex: number): Buffer {
     const buffer = Buffer.alloc(5);
     const isAnchor = tileRef.x === 0 && tileRef.y === 0;
 

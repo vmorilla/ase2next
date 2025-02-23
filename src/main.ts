@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { loadSprite } from "./sprite";
-import { writeMetadata, writeSpritePatterns } from "./next";
+// import { writeMetadata, writeSpritePatterns } from "./next";
 import { writeTileDefinitions } from "./tiledefs_writer";
 import { writePalettes } from "./palettes_writer";
 import { writeFrameDefinitions } from "./framedef_file";
@@ -20,25 +20,6 @@ async function main(options: Options, inputFiles: string[]) {
 
     const layers = sprites.flatMap(sprite => sprite.layers);
     const tilesets = layers.map(layer => layer.tileset);
-
-    const spritePatternsFile = options.writeSpritePatterns;
-    if (spritePatternsFile !== undefined) {
-
-        await writeSpritePatterns(tilesets, spritePatternsFile);
-        console.log(`Patterns written to ${spritePatternsFile}`);
-    }
-
-    const spriteSlotsFile = options.writeSpriteAttrSlots;
-    if (spriteSlotsFile !== undefined) {
-        const inputMetadataFile = options.metadataFile;
-        if (inputMetadataFile === undefined) {
-            throw new Error("Metadata file is required to write sprite attribute slots");
-        }
-
-        // Opens the metadata file and parses it as a JSON object
-        await writeMetadata(sprites, inputMetadataFile, spriteSlotsFile);
-        console.log(`Metadata written to ${spriteSlotsFile}`);
-    }
 
     const tileDefinitionsFile = options.writeTileDefinitions;
     if (tileDefinitionsFile !== undefined) {
