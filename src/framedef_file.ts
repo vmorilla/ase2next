@@ -21,7 +21,7 @@ export async function writeFrameDefinitions(sprites: Sprite[], page: number, asm
         for (const cel of skin.cels) {
             const binaryFile = binaryFilename(binaryDir, skin.name, cel.frame.frameIndex, skin.cels.length);
             const data = Buffer.concat(celSpriteAttrsAndPatterns(cel));
-            // Cannot write here since I need pattern offset information
+            fs.writeFileSync(binaryFile, data);
 
             let defFile = frameDefFiles.find(f => f.fitsInPage(data.length));
             if (!defFile) {
@@ -54,15 +54,6 @@ export async function writeFrameDefinitions(sprites: Sprite[], page: number, asm
 
     writeSkinFile(path.join(asmDir, "skins.c"), frameDefFiles);
     writeSkinHeaderFile(path.join(asmDir, SKINS_HEADER_FILE), skins);
-
-    // Write the frame content files in binary format considering frame offset
-    for (const skin of skins) {
-        for (const cel of skin.cels) {
-            const binaryFile = binaryFilename(binaryDir, skin.name, cel.frame.frameIndex, skin.cels.length);
-            const data = Buffer.concat(celSpriteAttrsAndPatterns(cel));
-            fs.writeFileSync(binaryFile, data);
-        }
-    }
 }
 interface FrameDefData {
     offsetX: number;
