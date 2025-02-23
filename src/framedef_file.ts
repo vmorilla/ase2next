@@ -1,4 +1,4 @@
-import fs, { write } from "fs";
+import fs from "fs";
 import path from "path";
 import { Cel, Layer, Sprite } from "./sprite";
 import { celNumberOfPatterns, celSpriteAttrsAndPatterns, tilemapAnchor } from "./cel";
@@ -18,9 +18,10 @@ export async function writeFrameDefinitions(sprites: Sprite[], page: number, asm
     const skins = sprites.flatMap(sprite => sprite.layers);
 
     for (const skin of skins) {
+        const maxSpritesInSkin = Math.max(...skin.cels.map(cel => cel.tilemap.length));
         for (const cel of skin.cels) {
             const binaryFile = binaryFilename(binaryDir, skin.name, cel.frame.frameIndex, skin.cels.length);
-            const data = Buffer.concat(celSpriteAttrsAndPatterns(cel));
+            const data = Buffer.concat(celSpriteAttrsAndPatterns(cel, maxSpritesInSkin));
             fs.writeFileSync(binaryFile, data);
 
             let defFile = frameDefFiles.find(f => f.fitsInPage(data.length));

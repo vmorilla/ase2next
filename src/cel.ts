@@ -34,6 +34,10 @@ export function tilemapAnchor(cel: Cel): TileRef {
     return anchor;
 }
 
+// Empty sprite... only bit is in attr 3 to indiciate the 5th byte is used
+const emptySprite = Buffer.alloc(5);
+emptySprite.fill(0).writeUInt8(0x40, 3);
+
 function spriteNextAttrs(tileRef: TileRef): Buffer {
     const buffer = Buffer.alloc(5);
     const isAnchor = tileRef.x === 0 && tileRef.y === 0;
@@ -76,10 +80,11 @@ function spriteNextAttrs(tileRef: TileRef): Buffer {
  * and tile attribute that corresponds to the anchor is always the first one.
  * This way, pattern indexes can be relative to the anchor tile.
  * @param cel 
+ * @param maxSprites Maximum number of sprites in the skin. It is used to fill in the remain attributes with invisible sprites
  * @param colorFn 
  * @returns 
  */
-export function celSpriteAttrsAndPatterns(cel: Cel, colorFn = nextColor256()): [Buffer, Buffer] {
+export function celSpriteAttrsAndPatterns(cel: Cel, maxSprites: number, colorFn = nextColor256()): [Buffer, Buffer] {
     const tileSize = 16 * 16;
     const anchor = tilemapAnchor(cel);
 
@@ -105,5 +110,12 @@ export function celSpriteAttrsAndPatterns(cel: Cel, colorFn = nextColor256()): [
     const attrsBuffer = remappedTilemap.reduce((acc_buffer, tileRef) => Buffer.concat(
         [acc_buffer, spriteNextAttrs(tileRef)]), Buffer.alloc(0));
 
-    return [attrsBuffer, patternsBuffer];
+    // Fill the rest of the buffer with empty sprites
+    const fill: Buffer[] = Array(maxSprites - remappedTilemap.length).fill(emptySprite);
+    const attrsBufferWithFill = Buffer.concat([attrsBuffer, ...fill]);
+
+    return [attrsBufferWithFill, patternsBuffer];
 }
+
+
+
