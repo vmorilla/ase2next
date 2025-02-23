@@ -1,4 +1,4 @@
-import fs, { write } from "fs";
+import fs from "fs";
 import path from "path";
 import { Cel, Layer, Sprite } from "./sprite";
 import { celNumberOfPatterns, celSpriteAttrsAndPatterns, tilemapAnchor } from "./cel";
@@ -18,10 +18,11 @@ export async function writeFrameDefinitions(sprites: Sprite[], page: number, asm
     const skins = sprites.flatMap(sprite => sprite.layers);
 
     for (const skin of skins) {
+        const maxSpritesInSkin = Math.max(...skin.cels.map(cel => cel.tilemap.length));
         for (const cel of skin.cels) {
             const binaryFile = binaryFilename(binaryDir, skin.name, cel.frame.frameIndex, skin.cels.length);
-            const data = Buffer.concat(celSpriteAttrsAndPatterns(cel, 0));
-            // Cannot write here since I need pattern offset information
+            const data = Buffer.concat(celSpriteAttrsAndPatterns(cel, maxSpritesInSkin));
+            fs.writeFileSync(binaryFile, data);
 
             let defFile = frameDefFiles.find(f => f.fitsInPage(data.length));
             if (!defFile) {
@@ -54,18 +55,6 @@ export async function writeFrameDefinitions(sprites: Sprite[], page: number, asm
 
     writeSkinFile(path.join(asmDir, "skins.c"), frameDefFiles);
     writeSkinHeaderFile(path.join(asmDir, SKINS_HEADER_FILE), skins);
-
-    const patternOffsets = patternOffsetBySkin(frameDefs);
-
-    // Write the frame content files in binary format considering frame offset
-    for (const skin of skins) {
-        const skinOffset = patternOffsets.get(skin.name)!;
-        for (const cel of skin.cels) {
-            const binaryFile = binaryFilename(binaryDir, skin.name, cel.frame.frameIndex, skin.cels.length);
-            const data = Buffer.concat(celSpriteAttrsAndPatterns(cel, skinOffset));
-            fs.writeFileSync(binaryFile, data);
-        }
-    }
 }
 interface FrameDefData {
     offsetX: number;
@@ -79,7 +68,7 @@ interface FrameDefData {
     frameNumber: number;
 }
 
-const FRAMEDEF_OVERHEAD = 4; // 4 additional bytes for nTiles, nPatterns, offsetX and offsetY
+const FRAMEDEF_OVERHEAD = 3; // 3 additional bytes for nPatterns, offsetX and offsetY
 const PAGE_SIZE = 8192;
 
 class FrameDefFile {
@@ -109,7 +98,7 @@ class FrameDefFile {
 
         for (const frame of this.frames) {
             fs.writeSync(fd, `${asm_symbol_name(frame)}:\n`);
-            const data = [frame.nTiles, frame.nPatterns, frame.offsetX, frame.offsetY].map(formatByte);
+            const data = [frame.nPatterns, frame.offsetX, frame.offsetY].map(formatByte);
             fs.writeSync(fd, `\tdb ${data.join(", ")}\n`);
             const binary_ref = composePath(asmDir, frame.binary_filename);
             fs.writeSync(fd, `\tincbin "${binary_ref}"\n\n`);
@@ -169,7 +158,7 @@ function writeSkinFile(filename: string, frameDefFiles: FrameDefFile[]) {
         const maxTiles = Math.max(...ordFrames.map(f => f.nTiles));
         const maxPatterns = Math.max(...ordFrames.map(f => f.nPatterns));
         fs.writeSync(fd, `const SkinDefinition ${skin_symbol_name(skin)} = {\n`);
-        fs.writeSync(fd, `\t.maxSprites = ${maxTiles},\n`);
+        fs.writeSync(fd, `\t.nSprites = ${maxTiles},\n`);
         fs.writeSync(fd, `\t.maxPatterns = ${maxPatterns},\n`);
         fs.writeSync(fd, `\t.nFrames = ${ordFrames.length},\n`);
         fs.writeSync(fd, `\t.frameAddresses = {\n`);
