@@ -16,9 +16,7 @@ interface Options {
 async function main(options: Options, inputFiles: string[]) {
 
     const sprites = inputFiles.map(file => loadSprite(file));
-
-    // WIP
-    writeFrameDefinitions(sprites, 7, "./tmp/", "./tmp/");
+    writeFrameDefinitions(sprites, 28, "../next-tennis/src/", "../next-tennis/assets/");
 
     const layers = sprites.flatMap(sprite => sprite.layers);
     const tilesets = layers.map(layer => layer.tileset);

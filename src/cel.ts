@@ -10,13 +10,13 @@ export function celNumberOfPatterns(cel: Cel): number {
 // This function is now broken: remove it
 export function celAttrs(cel: Cel): Buffer {
     const anchor = tilemapAnchor(cel);
-    const buffer = spriteNextAttrs(anchor);
+    const buffer = spriteNextAttrs(anchor, 0);
 
     return cel.tilemap.reduce((acc_buffer, tileRef, index) => {
         if (tileRef === anchor)
             return acc_buffer;
 
-        const nextBuffer = spriteNextAttrs(tileRef);
+        const nextBuffer = spriteNextAttrs(tileRef, 0);
         return Buffer.concat([acc_buffer, nextBuffer]);
     }, buffer);
 }
@@ -48,8 +48,7 @@ export function tilemapAnchor(cel: Cel): TileRef {
     return anchor;
 }
 
-export function spriteNextAttrs(tileRef: TileRef): Buffer {
-    const patternId = tileRef.tile.tileIndex;
+export function spriteNextAttrs(tileRef: TileRef, anchorPatternIndex: number): Buffer {
     const buffer = Buffer.alloc(5);
     const isAnchor = tileRef.x === 0 && tileRef.y === 0;
 
@@ -62,6 +61,9 @@ export function spriteNextAttrs(tileRef: TileRef): Buffer {
         buffer.writeInt8(tileRef.x * 16, 0);
         buffer.writeInt8(tileRef.y * 16, 1);
     }
+
+    const patternId = isAnchor ? anchorPatternIndex : tileRef.tile.tileIndex;
+
 
     // Attr 2
     const paletteIndex = 0; // For the moment, we asume that we use a common palette
@@ -92,7 +94,7 @@ export function spriteNextAttrs(tileRef: TileRef): Buffer {
  * @param colorFn 
  * @returns 
  */
-export function celSpriteAttrsAndPatterns(cel: Cel, colorFn = nextColor256()): [Buffer, Buffer] {
+export function celSpriteAttrsAndPatterns(cel: Cel, skinOffset: number, colorFn = nextColor256()): [Buffer, Buffer] {
     const tileSize = 16 * 16;
     const anchor = tilemapAnchor(cel);
 
@@ -116,7 +118,7 @@ export function celSpriteAttrsAndPatterns(cel: Cel, colorFn = nextColor256()): [
     }));
 
     const attrsBuffer = remappedTilemap.reduce((acc_buffer, tileRef) => Buffer.concat(
-        [acc_buffer, spriteNextAttrs(tileRef)]), Buffer.alloc(0));
+        [acc_buffer, spriteNextAttrs(tileRef, skinOffset)]), Buffer.alloc(0));
 
     return [attrsBuffer, patternsBuffer];
 }
