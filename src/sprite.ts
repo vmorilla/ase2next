@@ -3,9 +3,14 @@ import fs from "fs";
 
 export interface Sprite {
     name: string;
+    palette?: Palette;
     layers: Layer[];
     frames: Frame[];
     tilesets: Tileset[];
+}
+
+export interface Palette {
+    colors: RGBAColor[]
 }
 
 export interface Layer {
@@ -15,17 +20,30 @@ export interface Layer {
     cels: Cel[];
 }
 
-export interface Tileset {
+interface TilesetBase {
     tilesetIndex: number;
     width: number;
     height: number;
-    tiles: Tile[];
 }
 
-export interface Tile {
-    tileIndex: number;
-    content: RGBAColor[];
+export interface IndexedColorTileset extends TilesetBase {
+    indexedColor: true;
+    tiles: Tile<IndexColor>[];
 }
+
+export interface RGBAColorTileset extends TilesetBase {
+    indexedColor: false;
+    tiles: Tile<RGBAColor>[];
+}
+
+export type Tileset = IndexedColorTileset | RGBAColorTileset;
+
+export interface Tile<Color> {
+    tileIndex: number;
+    content: Color[];
+}
+
+export type AnyTile = Tile<IndexColor> | Tile<RGBAColor>;
 
 export interface Frame {
     frameIndex: number;
@@ -37,35 +55,55 @@ export interface Cel {
     height: number;
     xPos: number;
     yPos: number;
-    tilemap: Array<TileRef | null>;
+    tilemap: Array<TileRef>;
 }
 
 export interface TileRef {
-    tile: Tile;
+    x: number;
+    y: number;
+    tile: Tile<IndexColor> | Tile<RGBAColor>;
     xFlip: boolean;
     yFlip: boolean;
     rotation: boolean;
 }
 
 export type RGBAColor = [number, number, number, number];
+export type IndexColor = number;
+
+export function spriteRelevantLayer(layer: Layer): boolean {
+    return layer.tileset.width === 16 && layer.tileset.height === 16;
+}
+
 
 export function loadSprite(file: string): Sprite {
     const buffer = fs.readFileSync(file);
     const ase = new Aseprite(buffer, file);
     ase.parse();
 
+
+    const palette = ase.palette ? loadPalette(ase.palette, ase.paletteIndex) : undefined;
     const tilesets = loadTilesets(ase);
     const frames = loadFrames(ase);
     const layers = loadLayers(ase, tilesets, frames);
     // Regular expression to extract the file name without extension or path
     const name = file.match(/([^\/\\]+)(?=\.\w+$)/)![0];
-    console.log(`Loaded sprite ${name}`);
     return {
         name,
         layers,
         tilesets,
-        frames
+        frames,
+        palette
     }
+}
+
+function loadPalette(palette: Aseprite.Palette | Aseprite.OldPalette, transparentIndex: number): Palette {
+    const colors: RGBAColor[] = palette.colors.map(color => color ? [color.red, color.green, color.blue, color.alpha] : [0, 0, 0, 255]);
+    if (!palette.hasOwnProperty("firstColor"))
+        colors[transparentIndex][3] = 0; // Sets alpha channel to 0
+    return {
+        colors
+    };
+
 }
 
 function loadFrames(ase: Aseprite): Frame[] {
@@ -75,25 +113,53 @@ function loadFrames(ase: Aseprite): Frame[] {
 }
 
 function loadTilesets(ase: Aseprite): Tileset[] {
+
+
     return ase.tilesets.map((tileset, tilesetIndex) => {
-        return {
+        const commonFields = {
             tilesetIndex,
-            tiles: Array.from(loadTiles(tileset)),
             width: tileset.tileWidth,
             height: tileset.tileHeight
         };
+
+        const bytesPerColor = tileset.rawTilesetData!.byteLength / (tileset.tileWidth * tileset.tileHeight * tileset.tileCount);
+
+        return bytesPerColor === 1 ? {
+            ...commonFields,
+            indexedColor: true,
+            tiles: Array.from(loadIndexedColorTiles(tileset))
+        } :
+            {
+                ...commonFields,
+                indexedColor: false,
+                tiles: Array.from(loadRGBATiles(tileset)),
+            };
     });
 }
 
-function* loadTiles(tileset: Aseprite.Tileset): Generator<Tile> {
+function* loadRGBATiles(tileset: Aseprite.Tileset): Generator<Tile<RGBAColor>> {
     const bytesPerPoint = 4; // bytes per point in aseprite tileset
     const tileSize = tileset.tileWidth * tileset.tileHeight;
 
     for (let tileIndex = 1; tileIndex < tileset.tileCount; tileIndex += 1) {
-        const tile: Tile = { tileIndex: tileIndex - 1, content: [] };
+        const tile: Tile<RGBAColor> = { tileIndex: tileIndex - 1, content: [] };
         for (let point = 0; point < tileSize; point += 1) {
             const pointIndex = (tileSize * tileIndex + point) * bytesPerPoint;
             const color = Array.from(tileset.rawTilesetData!.subarray(pointIndex, pointIndex + 4)) as RGBAColor;
+            tile.content.push(color);
+        }
+        yield tile;
+    }
+}
+
+function* loadIndexedColorTiles(tileset: Aseprite.Tileset): Generator<Tile<IndexColor>> {
+    const tileSize = tileset.tileWidth * tileset.tileHeight;
+
+    for (let tileIndex = 0; tileIndex < tileset.tileCount; tileIndex += 1) {
+        const tile: Tile<IndexColor> = { tileIndex: tileIndex, content: [] };
+        for (let point = 0; point < tileSize; point += 1) {
+            const pointIndex = (tileSize * tileIndex + point);
+            const color = tileset.rawTilesetData![pointIndex];
             tile.content.push(color);
         }
         yield tile;
@@ -122,7 +188,7 @@ function loadLayers(ase: Aseprite, tilesets: Tileset[], frames: Frame[]): Layer[
 
 function loadCel(cel: Aseprite.Cel, frame: Frame, tileset: Tileset): Cel {
 
-    const tilemap: Array<TileRef | null> = [];
+    const tilemap: Array<TileRef> = [];
     const tileMetadata = cel.tilemapMetadata!;
     const bytesPerTile = Math.ceil(tileMetadata.bitsPerTile / 8);
     const dataView = new DataView(cel.rawCelData.buffer);
@@ -130,16 +196,16 @@ function loadCel(cel: Aseprite.Cel, frame: Frame, tileset: Tileset): Cel {
     for (let i = 0; i < cel.rawCelData.byteLength; i += bytesPerTile) {
         const value = dataView.getUint32(i, true);
         const tileId = value & tileMetadata.bitmaskForTileId;
+        const x = (i / bytesPerTile) % cel.w;
+        const y = Math.floor((i / bytesPerTile) / cel.w);
 
         if (tileId !== 0) {
             const xFlip = (value & tileMetadata.bitmaskForXFlip) !== 0;
             const yFlip = (value & tileMetadata.bitmaskForYFlip) !== 0;
             const rotation = (value & tileMetadata.bitmaskFor90CWRotation) !== 0;
             const tile = tileset.tiles[tileId - 1];
-            tilemap.push({ tile, xFlip, yFlip, rotation });
+            tilemap.push({ tile, xFlip, yFlip, rotation, x, y });
         }
-        else
-            tilemap.push(null);
     }
 
     return {
@@ -151,10 +217,3 @@ function loadCel(cel: Aseprite.Cel, frame: Frame, tileset: Tileset): Cel {
         tilemap
     };
 }
-
-// export function celOffset(cel: Cel): [number, number] {
-
-//     return [x * 16 - cel.w * 8, (y - cel.h) * 16];
-
-//     return [cel.xPos - cel.width / 2, cel.yPos - cel.height];
-// }
