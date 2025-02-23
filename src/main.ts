@@ -1,14 +1,13 @@
 import { Command } from "commander";
 import { loadSprite } from "./sprite";
-// import { writeMetadata, writeSpritePatterns } from "./next";
 import { writeTileDefinitions } from "./tiledefs_writer";
 import { writePalettes } from "./palettes_writer";
 import { writeFrameDefinitions } from "./framedef_file";
 
 interface Options {
-    metadataFile?: string;
-    writeSpriteAttrSlots?: string;
-    writeSpritePatterns?: string;
+    sourcesDir?: string;
+    assetsDir?: string;
+    bank?: number;
     writeTileDefinitions?: string;
     writePalettes?: string;
 }
@@ -16,7 +15,14 @@ interface Options {
 async function main(options: Options, inputFiles: string[]) {
 
     const sprites = inputFiles.map(file => loadSprite(file));
-    writeFrameDefinitions(sprites, 28, "../next-tennis/src/", "../next-tennis/assets/");
+
+    if (options.bank || options.assetsDir || options.sourcesDir) {
+        if (!options.bank || !options.assetsDir || !options.sourcesDir) {
+            throw new Error("Bank, assets directory and sources directory must be specified together");
+        }
+        // Write sprite definitions mode
+        writeFrameDefinitions(sprites, options.bank, options.sourcesDir, options.assetsDir);
+    }
 
     const layers = sprites.flatMap(sprite => sprite.layers);
     const tilesets = layers.map(layer => layer.tileset);
@@ -39,10 +45,10 @@ const program = new Command();
 program
     .name('ase2next')
     .version('1.0.0')
-    .argument('<inputs...>', 'Input Aseprite file')
-    .option('-m, --metadata-file <file>', 'Sprite metadata input file')
-    .option('-s, --write-sprite-attr-slots <file>', 'Output .c file for representation of attribute slots')
-    .option('-p, --write-sprite-patterns <file>', 'Output sprite patterns file')
+    .argument('<inputs...>', 'Input Aseprite files')
+    .option('-s, --sources-dir <dir>', 'Output directory for source files (.c, .asm and .h)')
+    .option('-a, --assets-dir <dir>', 'Output directory for asset files')
+    .option('-b, --bank <number>', 'Starting 8k bank number for sprite assets')
     .option('-t, --write-tile-definitions <file>', 'Write tile definitions to binary file')
     .option('-c, --write-palettes <file>', 'Write palettes to binary file')
     .parse(process.argv);
