@@ -34,7 +34,7 @@ export function tilemapAnchor(cel: Cel): TileRef {
     return anchor;
 }
 
-function spriteNextAttrs(tileRef: TileRef, anchorPatternIndex: number): Buffer {
+function spriteNextAttrs(tileRef: TileRef): Buffer {
     const buffer = Buffer.alloc(5);
     const isAnchor = tileRef.x === 0 && tileRef.y === 0;
 
@@ -48,8 +48,6 @@ function spriteNextAttrs(tileRef: TileRef, anchorPatternIndex: number): Buffer {
         buffer.writeInt8(tileRef.y * 16, 1);
     }
 
-    const patternId = isAnchor ? anchorPatternIndex : tileRef.tile.tileIndex;
-
 
     // Attr 2
     const paletteIndex = 0; // For the moment, we asume that we use a common palette
@@ -59,6 +57,7 @@ function spriteNextAttrs(tileRef: TileRef, anchorPatternIndex: number): Buffer {
     buffer.writeUInt8(attr2, 2);
 
     // Attr 3
+    const patternId = tileRef.tile.tileIndex;
     const attr3 = (patternId & 0x3f) | 0xc0; // Sprite is visible and attribute 4 is used
     buffer.writeUInt8(attr3, 3);
 
@@ -80,7 +79,7 @@ function spriteNextAttrs(tileRef: TileRef, anchorPatternIndex: number): Buffer {
  * @param colorFn 
  * @returns 
  */
-export function celSpriteAttrsAndPatterns(cel: Cel, skinOffset: number, colorFn = nextColor256()): [Buffer, Buffer] {
+export function celSpriteAttrsAndPatterns(cel: Cel, colorFn = nextColor256()): [Buffer, Buffer] {
     const tileSize = 16 * 16;
     const anchor = tilemapAnchor(cel);
 
@@ -104,7 +103,7 @@ export function celSpriteAttrsAndPatterns(cel: Cel, skinOffset: number, colorFn 
     }));
 
     const attrsBuffer = remappedTilemap.reduce((acc_buffer, tileRef) => Buffer.concat(
-        [acc_buffer, spriteNextAttrs(tileRef, skinOffset)]), Buffer.alloc(0));
+        [acc_buffer, spriteNextAttrs(tileRef)]), Buffer.alloc(0));
 
     return [attrsBuffer, patternsBuffer];
 }
