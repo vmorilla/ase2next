@@ -3,11 +3,15 @@ import fs from "fs";
 
 export interface Sprite {
     name: string;
+    width: number;
+    height: number;
     palette?: Palette;
     layers: Layer[];
     frames: Frame[];
     tilesets: Tileset[];
 }
+
+export type Point = [number, number];
 
 export interface Palette {
     colors: RGBAColor[]
@@ -16,7 +20,7 @@ export interface Palette {
 export interface Layer {
     layerIndex: number;
     name: string;
-    tileset: Tileset;
+    tileset?: Tileset;
     cels: Cel[];
 }
 
@@ -50,6 +54,8 @@ export interface Frame {
 }
 
 export interface Cel {
+    canvasWidth: number;
+    canvasHeight: number;
     frame: Frame;
     width: number;
     height: number;
@@ -70,29 +76,31 @@ export interface TileRef {
 export type RGBAColor = [number, number, number, number];
 export type IndexColor = number;
 
-export function spriteRelevantLayer(layer: Layer): boolean {
-    return layer.tileset.width === 16 && layer.tileset.height === 16;
-}
-
-
 export function loadSprite(file: string): Sprite {
     const buffer = fs.readFileSync(file);
     const ase = new Aseprite(buffer, file);
-    ase.parse();
+    try {
+
+        ase.parse();
 
 
-    const palette = ase.palette ? loadPalette(ase.palette, ase.paletteIndex) : undefined;
-    const tilesets = loadTilesets(ase);
-    const frames = loadFrames(ase);
-    const layers = loadLayers(ase, tilesets, frames);
-    // Regular expression to extract the file name without extension or path
-    const name = file.match(/([^\/\\]+)(?=\.\w+$)/)![0];
-    return {
-        name,
-        layers,
-        tilesets,
-        frames,
-        palette
+        const palette = ase.palette ? loadPalette(ase.palette, ase.paletteIndex) : undefined;
+        const tilesets = loadTilesets(ase);
+        const frames = loadFrames(ase);
+        const layers = loadLayers(ase, tilesets, frames);
+        // Regular expression to extract the file name without extension or path
+        const name = file.match(/([^\/\\]+)(?=\.\w+$)/)![0];
+        return {
+            width: ase.width,
+            height: ase.height,
+            name,
+            layers,
+            tilesets,
+            frames,
+            palette
+        }
+    } catch (error: any) {
+        throw new Error(`Error parsing file ${file}: ${error.message}`);
     }
 }
 
@@ -171,22 +179,31 @@ function loadLayers(ase: Aseprite, tilesets: Tileset[], frames: Frame[]): Layer[
 
     for (let layerIndex = 0; layerIndex < ase.layers.length; layerIndex++) {
         const layer = ase.layers[layerIndex];
-        if (layer.tilesetIndex !== undefined) {
-            const tileset = tilesets[layer.tilesetIndex];
-            const cels = frames.map(frame => loadCel(ase.frames[frame.frameIndex].cels[layerIndex], frame, tileset));
-            layers.push({
-                layerIndex,
-                name: layer.name,
-                tileset,
-                cels
-            });
+        if (layer.flags.visible) {
+            if (layer.tilesetIndex !== undefined) {
+                const tileset = tilesets[layer.tilesetIndex];
+                const cels = frames.map(frame => loadTiledCel(ase.frames[frame.frameIndex].cels[layerIndex], frame, tileset, ase.width, ase.height));
+                layers.push({
+                    layerIndex,
+                    name: layer.name,
+                    tileset,
+                    cels
+                });
+            } else {
+                const cels = frames.map(frame => loadCel(ase.frames[frame.frameIndex].cels[layerIndex], frame, ase.width, ase.height));
+                layers.push({
+                    layerIndex,
+                    name: layer.name,
+                    cels
+                });
+            }
         }
     }
 
     return layers;
 }
 
-function loadCel(cel: Aseprite.Cel, frame: Frame, tileset: Tileset): Cel {
+function loadTiledCel(cel: Aseprite.Cel, frame: Frame, tileset: Tileset, canvasWidth: number, canvasHeight: number): Cel {
 
     const tilemap: Array<TileRef> = [];
     const tileMetadata = cel.tilemapMetadata!;
@@ -210,8 +227,64 @@ function loadCel(cel: Aseprite.Cel, frame: Frame, tileset: Tileset): Cel {
 
     return {
         frame,
+        canvasWidth,
+        canvasHeight,
         width: cel.w,
         height: cel.h,
+        xPos: cel.xpos,
+        yPos: cel.ypos,
+        tilemap
+    };
+}
+
+function loadCel(cel: Aseprite.Cel, frame: Frame, canvasWidth: number, canvasHeight: number): Cel {
+
+    const tilemap: Array<TileRef> = [];
+    const dataView = new DataView(cel.rawCelData.buffer);
+    const tileSide = 16;
+
+    const width = Math.ceil(cel.w / tileSide);
+    const height = Math.ceil(cel.h / tileSide);
+
+    let tileIndex = 0;
+    for (let celY = 0; celY < height; celY++) {
+        for (let celX = 0; celX < width; celX++) {
+            let empty = true;
+            const tileContent: RGBAColor[] = [];
+            for (let pixelY = 0; pixelY < tileSide; pixelY++) {
+                const y = celY * tileSide + pixelY;
+                for (let pixelX = 0; pixelX < tileSide; pixelX++) {
+                    const x = celX * tileSide + pixelX;
+                    if (x >= cel.w || y >= cel.h)
+                        tileContent.push([0, 0, 0, 0]);
+                    else {
+                        const pointIndex = 4 * (y * cel.w + x);
+                        const color = Array.from({ length: 4 }, (_, i) => dataView.getUint8(pointIndex + i));
+                        tileContent.push(color as RGBAColor);
+                        if (color[3] !== 0) { // Alpha channel is not zero
+                            empty = false;
+                        }
+                    }
+                }
+            }
+            if (!empty)
+                tilemap.push({
+                    x: celX,
+                    y: celY,
+                    tile: { tileIndex: tileIndex++, content: tileContent },
+                    xFlip: false,
+                    yFlip: false,
+                    rotation: false
+                });
+        }
+    }
+
+    return {
+        frame,
+        canvasWidth,
+        canvasHeight,
+        width,
+        height,
         xPos: cel.xpos,
         yPos: cel.ypos,
         tilemap

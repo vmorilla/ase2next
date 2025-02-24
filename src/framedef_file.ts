@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { Cel, Layer, Sprite } from "./sprite";
+import { Cel, Layer, Point, Sprite } from "./sprite";
 import { celNumberOfPatterns, celSpriteAttrsAndPatterns, tilemapAnchor } from "./cel";
 
 const FRAMES_HEADER_FILE = "frames_def.h";
@@ -13,7 +13,7 @@ const SKINS_HEADER_FILE = "skins.h";
  * Asm files follow the name convention: @asmDir/sprites_page_nn.asm
  * Binary files follow the name convention: @binaryDir/sprites_skin_nn.bin where nn is the frame number
  */
-export async function writeFrameDefinitions(sprites: Sprite[], page: number, asmDir: string, binaryDir: string) {
+export async function writeFrameDefinitions(sprites: Sprite[], page: number, asmDir: string, binaryDir: string, refPoint: Point) {
     const frameDefFiles: FrameDefFile[] = [];
     const skins = sprites.flatMap(sprite => sprite.layers);
 
@@ -30,7 +30,7 @@ export async function writeFrameDefinitions(sprites: Sprite[], page: number, asm
                 frameDefFiles.push(defFile);
             }
 
-            const [offsetX, offsetY] = celOffset(cel);
+            const [offsetX, offsetY] = celOffset(cel, refPoint);
             defFile.addFrame({
                 nTiles: cel.tilemap.length,
                 nPatterns: celNumberOfPatterns(cel),
@@ -212,9 +212,11 @@ class CFrameDefinitionWriteer {
 
 
 
-function celOffset(cel: Cel): [number, number] {
+function celOffset(cel: Cel, refPoint: Point): [number, number] {
+    const absRefPoint = [refPoint[0] * cel.canvasWidth, refPoint[1] * cel.canvasHeight];
     const anchor = tilemapAnchor(cel);
-    return [anchor.x * 16 - (cel.width * 16 + cel.xPos) / 2, (anchor.y - cel.height) * 16];
+    const anchorPosition = [anchor.x * 16 + cel.xPos, anchor.y * 16 + cel.yPos];
+    return [anchorPosition[0] - absRefPoint[0], anchorPosition[1] - absRefPoint[1]];
 }
 
 

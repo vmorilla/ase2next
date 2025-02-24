@@ -1,7 +1,6 @@
 import { nextColor256 } from "./colors";
 import { Cel, RGBAColor, Tile, TileRef } from "./sprite";
 
-
 export function celNumberOfPatterns(cel: Cel): number {
     const patternIndexes = new Set(cel.tilemap.map(tileRef => tileRef.tile.tileIndex));
     return patternIndexes.size;
