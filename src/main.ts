@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { loadSprite } from "./sprite";
+import { loadSprite, Point, Tileset } from "./sprite";
 import { writeTileDefinitions } from "./tiledefs_writer";
 import { writePalettes } from "./palettes_writer";
 import { writeFrameDefinitions } from "./framedef_file";
@@ -12,6 +12,16 @@ interface Options {
     writePalettes?: string;
 }
 
+export const ReferencePoint = {
+    TopLeft: [0, 0] as Point,
+    TopCenter: [0.5, 0] as Point,
+    TopRight: [1, 0] as Point,
+    BottomLeft: [0, 1] as Point,
+    BottomRight: [1, 1] as Point,
+    BottomCenter: [0.5, 1] as Point,
+    Center: [0.5, 0.5] as Point
+}
+
 async function main(options: Options, inputFiles: string[]) {
 
     const sprites = inputFiles.map(file => loadSprite(file));
@@ -21,14 +31,13 @@ async function main(options: Options, inputFiles: string[]) {
             throw new Error("Bank, assets directory and sources directory must be specified together");
         }
         // Write sprite definitions mode
-        writeFrameDefinitions(sprites, options.bank, options.sourcesDir, options.assetsDir);
+        writeFrameDefinitions(sprites, options.bank, options.sourcesDir, options.assetsDir, ReferencePoint.BottomCenter);
     }
-
-    const layers = sprites.flatMap(sprite => sprite.layers);
-    const tilesets = layers.map(layer => layer.tileset);
 
     const tileDefinitionsFile = options.writeTileDefinitions;
     if (tileDefinitionsFile !== undefined) {
+        const layers = sprites.flatMap(sprite => sprite.layers);
+        const tilesets = layers.filter(layer => layer.tileset).map(layer => layer.tileset) as Tileset[];
         await writeTileDefinitions(tilesets, tileDefinitionsFile);
     }
 
