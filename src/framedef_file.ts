@@ -185,7 +185,7 @@ function writeSkinHeaderFile(filename: string, skins: Layer[]) {
     fs.closeSync(fd);
 }
 
-const header_files = ["\"unified_sprites.h\"", "<stdint.h>"];
+const header_files = ['"unified_sprites.h"', '<stdint.h>'];
 class CFrameDefinitionWriteer {
 
     private fd: number;
@@ -214,7 +214,7 @@ class CFrameDefinitionWriteer {
 
 function celOffset(cel: Cel): [number, number] {
     const anchor = tilemapAnchor(cel);
-    return [anchor.x * 16 - (cel.width * 16 + cel.xPos) / 2, -cel.height * 16];
+    return [anchor.x * 16 - (cel.width * 16 + cel.xPos) / 2, (anchor.y - cel.height) * 16];
 }
 
 
