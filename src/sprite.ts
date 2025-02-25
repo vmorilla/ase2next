@@ -74,16 +74,14 @@ export interface TileRef {
 }
 
 export type RGBAColor = [number, number, number, number];
+export const TRANSPARENT_COLOR: RGBAColor = [0, 0, 0, 0];
 export type IndexColor = number;
 
 export function loadSprite(file: string): Sprite {
     const buffer = fs.readFileSync(file);
     const ase = new Aseprite(buffer, file);
     try {
-
         ase.parse();
-
-
         const palette = ase.palette ? loadPalette(ase.palette, ase.paletteIndex) : undefined;
         const tilesets = loadTilesets(ase);
         const frames = loadFrames(ase);
@@ -121,8 +119,6 @@ function loadFrames(ase: Aseprite): Frame[] {
 }
 
 function loadTilesets(ase: Aseprite): Tileset[] {
-
-
     return ase.tilesets.map((tileset, tilesetIndex) => {
         const commonFields = {
             tilesetIndex,
@@ -174,30 +170,37 @@ function* loadIndexedColorTiles(tileset: Aseprite.Tileset): Generator<Tile<Index
     }
 }
 
+// Convenience type to add the layer index to the aseprite layer
+interface IndexedLayer extends Aseprite.Layer {
+    layerIndex: number;
+}
+
 function loadLayers(ase: Aseprite, tilesets: Tileset[], frames: Frame[]): Layer[] {
     const layers: Layer[] = [];
+    const indexedLayers = ase.layers.map((layer, layerIndex) => ({ ...layer, layerIndex }));
+    const visibleLayers = indexedLayers.filter(layer => layer.flags.visible);
+    const tiledLayers = visibleLayers.filter(layer => layer.tilesetIndex !== undefined);
 
-    for (let layerIndex = 0; layerIndex < ase.layers.length; layerIndex++) {
-        const layer = ase.layers[layerIndex];
-        if (layer.flags.visible) {
-            if (layer.tilesetIndex !== undefined) {
-                const tileset = tilesets[layer.tilesetIndex];
-                const cels = frames.map(frame => loadTiledCel(ase.frames[frame.frameIndex].cels[layerIndex], frame, tileset, ase.width, ase.height));
-                layers.push({
-                    layerIndex,
-                    name: layer.name,
-                    tileset,
-                    cels
-                });
-            } else {
-                const cels = frames.map(frame => loadCel(ase.frames[frame.frameIndex].cels[layerIndex], frame, ase.width, ase.height));
-                layers.push({
-                    layerIndex,
-                    name: layer.name,
-                    cels
-                });
-            }
-        }
+    for (const layer of tiledLayers) {
+        const tileset = tilesets[layer.tilesetIndex!];
+        const cels = frames.map(frame => loadTiledCel(ase.frames[frame.frameIndex].cels[layer.layerIndex], frame, tileset, ase.width, ase.height));
+        layers.push({
+            layerIndex: layer.layerIndex,
+            name: layer.name,
+            tileset,
+            cels
+        });
+    }
+
+    const rgbLayers = visibleLayers.filter(layer => layer.tilesetIndex === undefined);
+    if (rgbLayers.length > 0) {
+        const cels = mergeLayers(rgbLayers, frames, ase);
+        const refLayer = rgbLayers[0];
+        layers.push({
+            layerIndex: refLayer.layerIndex,
+            name: refLayer.name,
+            cels
+        });
     }
 
     return layers;
@@ -236,6 +239,7 @@ function loadTiledCel(cel: Aseprite.Cel, frame: Frame, tileset: Tileset, canvasW
         tilemap
     };
 }
+
 
 function loadCel(cel: Aseprite.Cel, frame: Frame, canvasWidth: number, canvasHeight: number): Cel {
 
@@ -289,4 +293,85 @@ function loadCel(cel: Aseprite.Cel, frame: Frame, canvasWidth: number, canvasHei
         yPos: cel.ypos,
         tilemap
     };
+}
+
+function mergeLayers(rgbLayers: IndexedLayer[], frames: Frame[], ase: Aseprite): Cel[] {
+    const mergedCels: Cel[] = [];
+    for (const frame of frames) {
+        const cels = rgbLayers.map(layer => ase.frames[frame.frameIndex].cels[layer.layerIndex]);
+        const mergedCel = mergeCels(cels, ase, frame);
+        mergedCels.push(mergedCel);
+    }
+
+    return mergedCels;
+}
+
+function mergeCels(cels: Aseprite.Cel[], ase: Aseprite, frame: Frame): Cel {
+    const canvasWidth = ase.width;
+    const canvasHeight = ase.height;
+
+    const xpos = Math.min(...cels.map(cel => cel.xpos));
+    const ypos = Math.min(...cels.map(cel => cel.ypos));
+    const width = Math.max(...cels.map(cel => cel.xpos + cel.w)) - xpos;
+    const height = Math.max(...cels.map(cel => cel.ypos + cel.h)) - ypos;
+
+    const tileSide = 16;
+    const nTilesX = Math.ceil(width / tileSide);
+    const nTilesY = Math.ceil(height / tileSide);
+
+    let tileIndex = 0;
+    const tileRefs: TileRef[] = [];
+    for (let tileY = 0; tileY < nTilesY; tileY++) {
+        for (let tileX = 0; tileX < nTilesX; tileX++) {
+            let empty = true;
+            const tileContent: RGBAColor[] = [];
+            for (let pixelY = 0; pixelY < tileSide; pixelY++) {
+                for (let pixelX = 0; pixelX < tileSide; pixelX++) {
+                    const x = tileX * tileSide + pixelX;
+                    const y = tileY * tileSide + pixelY;
+                    let color = TRANSPARENT_COLOR;
+                    for (const cel of cels) {
+                        const layerColor = pointInCel(x + xpos, y + ypos, cel);
+                        if (layerColor[3] !== 0) {
+                            color = layerColor;
+                            empty = false;
+                        }
+                    }
+                    tileContent.push(color);
+                }
+            }
+            if (!empty) {
+                tileRefs.push({
+                    x: tileX,
+                    y: tileY,
+                    tile: { tileIndex: tileIndex++, content: tileContent },
+                    xFlip: false,
+                    yFlip: false,
+                    rotation: false
+                });
+            }
+        }
+    }
+
+    return {
+        frame,
+        canvasWidth,
+        canvasHeight,
+        width: nTilesX,
+        height: nTilesY,
+        xPos: xpos,
+        yPos: ypos,
+        tilemap: tileRefs
+    };
+}
+
+function pointInCel(x: number, y: number, cel: Aseprite.Cel): RGBAColor {
+
+    if (x >= cel.xpos && x < cel.xpos + cel.w && y >= cel.ypos && y < cel.ypos + cel.h) {
+        const dataView = new DataView(cel.rawCelData.buffer);
+        const pointIndex = 4 * ((y - cel.ypos) * cel.w + (x - cel.xpos));
+        return Array.from({ length: 4 }, (_, i) => dataView.getUint8(pointIndex + i)) as RGBAColor;
+    }
+    else
+        return TRANSPARENT_COLOR;
 }
