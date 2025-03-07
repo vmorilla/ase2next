@@ -20,9 +20,7 @@
                 "../next-tennis/assets/",
                 "-b",
                 "28",
-                "../next-tennis/assets/sprites/ball.aseprite",
-                "../next-tennis/assets/sprites/net.aseprite",
-                "../next-tennis/assets/sprites/player.aseprite",
+                "../next-tennis/assets/sprites/service.aseprite",
                 //
                 // "-t",
                 // "../next-tennis/assets/tiledefs.bin",

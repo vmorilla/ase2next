@@ -13,7 +13,7 @@ const SKINS_HEADER_FILE = "skins.h";
  * Asm files follow the name convention: @asmDir/sprites_page_nn.asm
  * Binary files follow the name convention: @binaryDir/sprites_skin_nn.bin where nn is the frame number
  */
-export async function writeFrameDefinitions(sprites: Sprite[], page: number, asmDir: string, binaryDir: string, refPoint: Point) {
+export function writeFrameDefinitions(sprites: Sprite[], page: number, asmDir: string, binaryDir: string, refPoint: Point) {
     const frameDefFiles: FrameDefFile[] = [];
     const skins = sprites.flatMap(sprite => sprite.layers);
 

@@ -32,6 +32,8 @@ async function main(options: Options, inputFiles: string[]) {
         }
         // Write sprite definitions mode
         writeFrameDefinitions(sprites, options.bank, options.sourcesDir, options.assetsDir, ReferencePoint.BottomCenter);
+        console.log(`Wrote sprite definitions starting in bank ${options.bank}`);
+
     }
 
     const tileDefinitionsFile = options.writeTileDefinitions;
@@ -45,6 +47,8 @@ async function main(options: Options, inputFiles: string[]) {
     if (palettesFile !== undefined) {
         await writePalettes(sprites, palettesFile);
     }
+
+    return 0;
 }
 
 
