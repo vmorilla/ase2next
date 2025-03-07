@@ -297,8 +297,9 @@ function loadCel(cel: Aseprite.Cel, frame: Frame, canvasWidth: number, canvasHei
 
 function mergeLayers(rgbLayers: IndexedLayer[], frames: Frame[], ase: Aseprite): Cel[] {
     const mergedCels: Cel[] = [];
+    const layerIndexes = rgbLayers.map(layer => layer.layerIndex);
     for (const frame of frames) {
-        const cels = rgbLayers.map(layer => ase.frames[frame.frameIndex].cels[layer.layerIndex]).filter(c => c != undefined);
+        const cels = ase.frames[frame.frameIndex].cels.filter(c => layerIndexes.includes(c.layerIndex));
         const mergedCel = mergeCels(cels, ase, frame);
         mergedCels.push(mergedCel);
     }
