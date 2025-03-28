@@ -15,7 +15,7 @@ export async function writeLayer2(sprite: Sprite, layer2Prefix: string) {
         stream.write(buffer.subarray(bank * bankSize, Math.min((bank + 1) * bankSize, buffer.length)));
     }
 
-    await writeToPng(buffer, cel.canvasHeight, cel.canvasWidth, layer2Prefix + ".png");
+    //await writeToPng(buffer, cel.canvasHeight, cel.canvasWidth, layer2Prefix + ".png");
 }
 
 async function writeToPng(buffer: Buffer, width: number, height: number, outputPath: string): Promise<void> {
@@ -57,8 +57,8 @@ function celBitmap(cel: Cel, colorFn = nextColor256()): Buffer {
     const tiles = cel.tilemap.map(tileref => tileref.tile) as Tile<RGBAColor>[];
 
     const buffer = Buffer.alloc(tiles.length * tileSize);
-    for (let x = 0; x < cel.canvasWidth; x++) {
-        for (let y = 0; y < cel.canvasHeight; y++) {
+    for (let y = 0; y < cel.canvasHeight; y++) {
+        for (let x = 0; x < cel.canvasWidth; x++) {
             const xTile = Math.floor(x / tileWidth);
             const yTile = Math.floor(y / tileHeight);
             const tileIndex = yTile * cel.canvasWidth / tileWidth + xTile;
@@ -66,30 +66,9 @@ function celBitmap(cel: Cel, colorFn = nextColor256()): Buffer {
             const xoffset = x - xTile * tileWidth;
             const yoffset = y - yTile * tileHeight;
             const tilePoint = tile.content[xoffset + yoffset * tileWidth];
-            buffer.writeUint8(colorFn(tilePoint), x + y * cel.canvasWidth);
+            buffer.writeUint8(colorFn(tilePoint), y + x * cel.canvasHeight);
         }
     }
-
-    return buffer;
-}
-
-function celBitmap2(cel: Cel, colorFn = nextColor256()): Buffer {
-    const tileHeight = 16;
-    const tileWidth = 16;
-    const tileSize = tileWidth * tileHeight;
-    const tiles = cel.tilemap.map(tileref => tileref.tile) as Tile<RGBAColor>[];
-
-    const buffer = Buffer.alloc(tiles.length * tileSize);
-
-    for (let tileX = 0; tileX < cel.canvasWidth / tileWidth; tileX++)
-        for (let offsetX = 0; offsetX < tileWidth; offsetX++)
-            for (let tileY = 0; tileY < cel.canvasHeight / tileHeight; tileY++)
-                for (let offsetY = 0; offsetY < tileHeight; offsetY++) {
-                    const tileIndex = tileY * cel.canvasWidth / tileWidth + tileX;
-                    const tile = cel.tilemap[tileIndex].tile as Tile<RGBAColor>;
-                    const tilePoint = tile.content[offsetX + offsetY * tileWidth];
-                    buffer.writeUint8(colorFn(tilePoint), offsetX + tileX * tileWidth + (offsetY + tileY * tileHeight) * cel.canvasWidth);
-                }
 
     return buffer;
 }
