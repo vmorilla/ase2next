@@ -3,6 +3,7 @@ import { loadSprite, Point, Tileset } from "./sprite";
 import { writeTileDefinitions } from "./tiledefs_writer";
 import { writePalettes } from "./palettes_writer";
 import { writeFrameDefinitions } from "./framedef_file";
+import { writeLayer2 } from "./layer2_writer";
 
 interface Options {
     sourcesDir?: string;
@@ -10,6 +11,7 @@ interface Options {
     bank?: number;
     writeTileDefinitions?: string;
     writePalettes?: string;
+    layer2Prefix?: string;
 }
 
 export const ReferencePoint = {
@@ -25,6 +27,11 @@ export const ReferencePoint = {
 async function main(options: Options, inputFiles: string[]) {
 
     const sprites = inputFiles.map(file => loadSprite(file));
+
+    if (options.layer2Prefix) {
+        // For the moment, we only process a sprite file
+        await writeLayer2(sprites[0], options.layer2Prefix);
+    }
 
     if (options.bank || options.assetsDir || options.sourcesDir) {
         if (!options.bank || !options.assetsDir || !options.sourcesDir) {
@@ -64,6 +71,7 @@ program
     .option('-b, --bank <number>', 'Starting 8k bank number for sprite assets')
     .option('-t, --write-tile-definitions <file>', 'Write tile definitions to binary file')
     .option('-c, --write-palettes <file>', 'Write palettes to binary file')
+    .option('-l, --layer2-prefix <prefix>', 'Write layer2 files using the provided prefix')
     .parse(process.argv);
 
 const options = program.opts();

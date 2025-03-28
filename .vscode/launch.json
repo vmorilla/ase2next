@@ -14,19 +14,22 @@
             ],
             "program": "${workspaceFolder}/src/main.ts",
             "args": [
-                "-s",
-                "../next-tennis/src/",
-                "-a",
-                "../next-tennis/assets/",
-                "-b",
-                "28",
-                "../next-tennis/assets/sprites/service.aseprite",
+                // "-s",
+                // "../next-point/src/",
+                // "-a",
+                // "../next-point/assets/",
+                // "-b",
+                // "28",
+                // "../next-point/assets/sprites/service.aseprite",
                 //
                 // "-t",
-                // "../next-tennis/assets/tiledefs.bin",
+                // "../next-point/assets/tiledefs.bin",
                 // "-c",
-                // "../next-tennis/assets/palettes.bin",
-                // "../next-tennis/assets/sprites/tiles.aseprite",
+                // "../next-point/assets/palettes.bin",
+                // "../next-point/assets/fonts/tiles.aseprite",
+                "-l",
+                "../next-point/assets/court.ly2.bank_",
+                "../next-point/graphics/court-base.aseprite"
             ],
             "outFiles": [
                 "${workspaceFolder}/**/*.js"
