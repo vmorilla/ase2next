@@ -20,7 +20,8 @@
     },
     "dependencies": {
         "ase-parser": "^0.0.18",
-        "commander": "^13.1.0"
+        "commander": "^13.1.0",
+        "sharp": "^0.33.5"
     },
     "bin": {
         "ase2next": "./dist/main.js"
