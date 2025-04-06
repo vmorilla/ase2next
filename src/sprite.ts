@@ -371,6 +371,7 @@ function pointInCel(x: number, y: number, cel: Aseprite.Cel): RGBAColor {
     if (x >= cel.xpos && x < cel.xpos + cel.w && y >= cel.ypos && y < cel.ypos + cel.h) {
         const dataView = new DataView(cel.rawCelData.buffer);
         const pointIndex = 4 * ((y - cel.ypos) * cel.w + (x - cel.xpos));
+        // TODO: support indexed color
         return Array.from({ length: 4 }, (_, i) => dataView.getUint8(pointIndex + i)) as RGBAColor;
     }
     else
