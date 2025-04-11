@@ -11,7 +11,7 @@ export async function writeLayer2(sprite: Sprite, layer2Prefix: string) {
     const buffer = celBitmap(cel);
     const bankSize = 16384;
     for (let bank = 0; bank < buffer.length / bankSize; bank++) {
-        const stream = fs.createWriteStream(layer2Prefix + bank);
+        const stream = fs.createWriteStream(`${layer2Prefix}${bank}.ly2`);
         stream.write(buffer.subarray(bank * bankSize, Math.min((bank + 1) * bankSize, buffer.length)));
     }
 
