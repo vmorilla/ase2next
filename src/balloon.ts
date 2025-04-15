@@ -21,7 +21,7 @@ export async function writeBalloonMap(sprite: Sprite) {
 
     // Write character and attrByte bytes to an output stream
 
-    const stream = fs.createWriteStream("balloon.map");
+    const stream = fs.createWriteStream("fonts/balloon.map");
 
     // Write columns (to facilitate expansion of the ballon runtime)
     for (let x = BALLOON_MAP_X; x < BALLOON_MAP_X + BALLOON_WIDTH; x++) {
