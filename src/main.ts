@@ -4,6 +4,7 @@ import { writeTileDefinitions } from "./tiledefs_writer";
 import { writePalettes } from "./palettes_writer";
 import { writeFrameDefinitions } from "./framedef_file";
 import { writeLayer2 } from "./layer2_writer";
+import { writeBalloonMap } from "./balloon";
 
 interface Options {
     sourcesDir?: string;
@@ -48,6 +49,7 @@ async function main(options: Options, inputFiles: string[]) {
         const layers = sprites.flatMap(sprite => sprite.layers);
         const tilesets = layers.filter(layer => layer.tileset).map(layer => layer.tileset) as Tileset[];
         await writeTileDefinitions(tilesets, tileDefinitionsFile);
+        await writeBalloonMap(sprites[0]); // Ad hoc call to get the balloon map
     }
 
     const palettesFile = options.writePalettes;
