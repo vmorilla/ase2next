@@ -43,9 +43,6 @@ export async function writeBalloonMap(sprite: Sprite, filename: string) {
             }
         }
     }
-
-    console.log(`Ballon map dimensions: ${BALLOON_WIDTH} x ${BALLOON_HEIGHT}`);
-
     // Close the stream
     await stream.end();
 }
