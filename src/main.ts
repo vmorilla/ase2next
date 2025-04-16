@@ -13,6 +13,7 @@ interface Options {
     writeTileDefinitions?: string;
     writePalettes?: string;
     layer2Prefix?: string;
+    balloonMap?: string;
 }
 
 export const ReferencePoint = {
@@ -49,7 +50,9 @@ async function main(options: Options, inputFiles: string[]) {
         const layers = sprites.flatMap(sprite => sprite.layers);
         const tilesets = layers.filter(layer => layer.tileset).map(layer => layer.tileset) as Tileset[];
         await writeTileDefinitions(tilesets, tileDefinitionsFile);
-        await writeBalloonMap(sprites[0]); // Ad hoc call to get the balloon map
+        if (options.balloonMap !== undefined) {
+            await writeBalloonMap(sprites[0], options.balloonMap); // Ad hoc call to get the balloon map
+        }
     }
 
     const palettesFile = options.writePalettes;
@@ -74,6 +77,7 @@ program
     .option('-t, --write-tile-definitions <file>', 'Write tile definitions to binary file')
     .option('-c, --write-palettes <file>', 'Write palettes to binary file')
     .option('-l, --layer2-prefix <prefix>', 'Write layer2 files using the provided prefix')
+    .option('-m, --balloon-map <file>', 'Write balloon map to binary file')
     .parse(process.argv);
 
 const options = program.opts();

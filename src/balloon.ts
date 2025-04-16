@@ -8,7 +8,7 @@ const BALLOON_WIDTH = 13;
 const BALLOON_HEIGHT = 4;
 const PALETTE = 2;
 
-export async function writeBalloonMap(sprite: Sprite) {
+export async function writeBalloonMap(sprite: Sprite, filename: string) {
     // Assumes one layer... gets first cel
     // Restricted to first cel
     const cel = sprite.layers[0].cels[0];
@@ -21,7 +21,7 @@ export async function writeBalloonMap(sprite: Sprite) {
 
     // Write character and attrByte bytes to an output stream
 
-    const stream = fs.createWriteStream("fonts/balloon.map");
+    const stream = fs.createWriteStream(filename);
 
     // Write columns (to facilitate expansion of the ballon runtime)
     for (let x = BALLOON_MAP_X; x < BALLOON_MAP_X + BALLOON_WIDTH; x++) {

@@ -27,6 +27,8 @@
                 "-c",
                 "../next-point/assets/palettes.bin",
                 "../next-point/assets/fonts/tiles.aseprite",
+                "-m",
+                "fonts/balloon.map",
                 //
                 // "-l",
                 // "../next-point/assets/court.ly2.bank_",
