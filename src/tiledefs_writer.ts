@@ -51,7 +51,6 @@ function tilesetToTileDefinitions(tileset: IndexedColorTileset) {
                 const tile8Number = (point >> 3) % 2 + 2 * (point >> 7);
                 const tilePoint = point % 8 + 8 * ((point >> 4) % 8);
                 const offset = tile8Number * 64 + tilePoint;
-                console.log(`Point: ${point}, Tile8Number: ${tile8Number}, TilePoint: ${tilePoint}, Offset: ${offset}`);
                 buffer.writeUInt8(color, (tileIndex * tileSize + offset) / 2);
             }
 
